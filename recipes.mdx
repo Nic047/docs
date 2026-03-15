@@ -72,17 +72,27 @@ const WORKSPACES = {
     apps: ['Visual Studio Code', 'iTerm2', 'Slack'],
     brightness: 80,
     volume: 30,
+    wifi: 'Work-WiFi',
   },
   relax: {
     apps: ['Spotify', 'Safari'],
     brightness: 40,
     volume: 60,
+    wifi: 'Home-WiFi',
   },
 };
 
 async function switchWorkspace(workspaceName) {
   const workspace = WORKSPACES[workspaceName];
   if (!workspace) throw new Error(`Unknown workspace: ${workspaceName}`);
+
+  // Close non-essential running apps
+  const runningApps = await mac.system.getRunningApps();
+  for (const app of runningApps) {
+    if (!workspace.apps.includes(app.name) && app.name !== 'Finder') {
+      await mac.system.quitApp(app.name);
+    }
+  }
 
   // Open required apps
   for (const app of workspace.apps) {
@@ -92,6 +102,11 @@ async function switchWorkspace(workspaceName) {
   // Adjust system settings
   await mac.system.setBrightness(workspace.brightness);
   await mac.system.setVolume(workspace.volume);
+
+  // Connect to preferred WiFi
+  if (workspace.wifi) {
+    await mac.system.connectToWifi(workspace.wifi);
+  }
 
   await mac.notification('Workspace Activated', `Switched to ${workspaceName} mode`);
 }
@@ -132,6 +147,15 @@ class MeetingNoteTaker {
     this.meetingNotes.set(title, noteContent);
     await mac.notes.create(`Meeting: ${title}`, noteContent);
 
+    // Start recording (if permission granted)
+    try {
+      await mac.audio.startRecording({
+        output: `~/Documents/Meetings/${title.replace(/[^\w]/g, '_')}_${new Date().toISOString()}.m4a`,
+      });
+    } catch (error) {
+      console.warn('Could not start recording:', error.message);
+    }
+
     return noteContent;
   }
 
@@ -147,6 +171,14 @@ class MeetingNoteTaker {
 
   async endMeeting() {
     if (!this.currentMeeting) return;
+
+    // Stop recording
+    try {
+      await mac.audio.stopRecording();
+    } catch (error) {
+      console.warn('Error stopping recording:', error.message);
+    }
+
     this.currentMeeting = null;
   }
 }
@@ -212,17 +244,110 @@ const mac = new Mac();
 
 class MorningRoutine {
   async executeRoutine() {
+    // Wake up the computer (if sleeping)
+    await mac.system.wake();
+
     // Adjust system settings
     await mac.system.setBrightness(70);
     await mac.system.setVolume(30);
 
-    // Read a summary out loud
-    await mac.speak('Good morning! Have a great day!');
+    // Build a morning summary
+    let summary = 'Good morning! ';
+
+    // Get weather (placeholder - use a weather API in production)
+    try {
+      const weather = { temperature: 72, condition: 'Partly Cloudy', high: 78, low: 65 };
+      summary += `It's currently ${weather.temperature} degrees and ${weather.condition}. `;
+      summary += `High of ${weather.high}, low of ${weather.low}. `;
+    } catch (error) {
+      console.warn('Could not fetch weather:', error.message);
+    }
+
+    summary += 'Have a great day!';
+
+    // Read the summary out loud
+    await mac.speak(summary);
 
     // Open morning apps
     await mac.openApp('Safari');
     await mac.openApp('Mail');
     await mac.openApp('Slack');
+
+    // Turn on smart lights via Home Assistant
+    try {
+      await mac.ha.callService('scene', 'turn_on', {
+        entity_id: 'scene.morning',
+      });
+    } catch (error) {
+      console.warn('Could not control smart lights:', error.message);
+    }
+
+    // Start coffee machine (if compatible)
+    try {
+      await mac.ha.callService('switch', 'turn_on', {
+        entity_id: 'switch.coffee_maker',
+      });
+    } catch (error) {
+      console.warn('Could not start coffee maker:', error.message);
+    }
+  }
+}
+```
+
+## Advanced: AI-powered assistant
+
+```typescript
+import { Mac } from '@mac-sdk/automation';
+
+class AIVirtualAssistant {
+  private mac: Mac;
+  private context: string[] = [];
+
+  constructor() {
+    this.mac = new Mac();
+    this.context.push(
+      'You are a helpful AI assistant integrated with the user\'s Mac. ' +
+      'You can control apps, files, and system settings. ' +
+      'Be concise and helpful.'
+    );
+  }
+
+  async processCommand(command: string) {
+    try {
+      this.context.push(`User: ${command}`);
+
+      // Get AI response (integrate your preferred AI service)
+      const aiResponse = await this.getAIResponse(command);
+      this.context.push(`Assistant: ${aiResponse}`);
+
+      // Execute any extracted commands
+      await this.executeCommands(aiResponse);
+
+      return aiResponse;
+    } catch (error) {
+      console.error('Error processing command:', error);
+      return 'Sorry, I encountered an error processing your request.';
+    }
+  }
+
+  private async getAIResponse(command: string): Promise<string> {
+    // Replace with your AI service integration
+    return `I'll help you with: ${command}`;
+  }
+
+  private async executeCommands(response: string) {
+    const commandMatch = response.match(/\[EXECUTE:(.*?)\]/);
+    if (commandMatch) {
+      const command = commandMatch[1].trim();
+
+      if (command.startsWith('open ')) {
+        const appName = command.substring(5);
+        await this.mac.openApp(appName);
+      } else if (command.startsWith('note ')) {
+        const noteContent = command.substring(5);
+        await this.mac.notes.create('AI Note', noteContent);
+      }
+    }
   }
 }
 ```

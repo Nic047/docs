@@ -32,6 +32,7 @@ This is a sample project created with Mac SDK.
 ## Features
 - File management
 - System automation
+- Cross-platform compatibility
 `);
 
 console.log('Files created:', filePath, readmePath);
@@ -133,6 +134,12 @@ await mac.system.remove('old-project', { recursive: true });
 
 // Force delete without confirmation
 await mac.system.remove('stubborn-file.txt', { force: true });
+
+// Delete with custom options
+await mac.system.remove('temp-dir', {
+  recursive: true,
+  force: false
+});
 ```
 
 ### Directory operations
@@ -350,6 +357,62 @@ async function backupDirectory(sourceDir, backupDir) {
 }
 
 const backupPath = await backupDirectory('/Users/me/Documents', '/Users/me/Backups');
+```
+
+### File cleanup utility
+
+```javascript
+async function cleanupDirectory(dirPath, options = {}) {
+  const mac = new Mac();
+  const {
+    olderThanDays = 30,
+    filePatterns = ['*.tmp', '*.log', '*.cache'],
+    dryRun = false
+  } = options;
+
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
+
+  let deletedCount = 0;
+  let totalSize = 0;
+
+  for (const pattern of filePatterns) {
+    const files = await mac.system.findFiles(pattern, dirPath);
+
+    for (const file of files) {
+      const fullPath = `${dirPath}/${file}`;
+      const stats = await mac.system.getInfo(fullPath);
+
+      if (stats.mtime < cutoffDate) {
+        if (dryRun) {
+          console.log(`Would delete: ${fullPath} (${stats.size} bytes)`);
+        } else {
+          await mac.system.remove(fullPath);
+          console.log(`Deleted: ${fullPath}`);
+        }
+
+        deletedCount++;
+        totalSize += stats.size;
+      }
+    }
+  }
+
+  const message = dryRun
+    ? `Would delete ${deletedCount} files (${(totalSize / 1024 / 1024).toFixed(2)} MB)`
+    : `Deleted ${deletedCount} files (${(totalSize / 1024 / 1024).toFixed(2)} MB)`;
+
+  await mac.system.notification('Cleanup Complete', message);
+  return { deletedCount, totalSize };
+}
+
+// Dry run first
+await cleanupDirectory('/Users/me/temp', { dryRun: true });
+
+// Actual cleanup
+await cleanupDirectory('/Users/me/temp', {
+  olderThanDays: 7,
+  filePatterns: ['*.tmp', '*.log']
+});
 ```
 
 ## Best practices

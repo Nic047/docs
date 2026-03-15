@@ -74,6 +74,46 @@ async function captureWebsites() {
 captureWebsites().catch(console.error);
 ```
 
+## Home Assistant integration
+
+Control smart home devices with voice commands:
+
+```javascript
+import { Mac } from '@mac-sdk/automation';
+
+async function homeAutomation() {
+  const mac = new Mac();
+
+  // Listen for voice commands
+  mac.system.on('voiceCommand', async (command) => {
+    command = command.toLowerCase();
+
+    if (command.includes('lights on')) {
+      await mac.ha.callService('light', 'turn_on', {
+        entity_id: 'light.living_room'
+      });
+      await mac.speak('Turning on the living room lights');
+    }
+    else if (command.includes('lights off')) {
+      await mac.ha.callService('light', 'turn_off', {
+        entity_id: 'light.living_room'
+      });
+      await mac.speak('Turning off the living room lights');
+    }
+    else if (command.includes('temperature')) {
+      const temp = await mac.ha.getState('sensor.living_room_temperature');
+      await mac.speak(`The current temperature is ${temp.state} degrees`);
+    }
+  });
+
+  // Start listening for voice commands
+  await mac.system.startVoiceRecognition();
+  console.log('Voice control activated. Try saying "lights on" or "what\'s the temperature"');
+}
+
+homeAutomation().catch(console.error);
+```
+
 ## Code snippet manager
 
 Save and retrieve code snippets from VS Code:

@@ -357,6 +357,26 @@ Access through `mac.vscode`.
 | `save()` | Save the current file |
 | `runCommand(commandId)` | Run a VS Code command by ID |
 
+### Home Assistant app
+
+Access through `mac.ha` or `mac.homeassistant`.
+
+| Method | Description |
+| --- | --- |
+| `callService(domain, service, serviceData?)` | Call a Home Assistant service (e.g., `'light'`, `'turn_on'`) |
+| `getState(entityId)` | Get the state of a Home Assistant entity (e.g., `'light.kitchen'`) |
+
+```javascript
+// Turn on the living room lights
+await mac.ha.callService('light', 'turn_on', {
+  entity_id: 'light.living_room'
+});
+
+// Check the state of a sensor
+const temp = await mac.ha.getState('sensor.living_room_temperature');
+console.log(`Temperature: ${temp.state}`);
+```
+
 ## Automation
 
 Create and manage desktop automations using the `Automation` class:
