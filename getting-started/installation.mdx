@@ -1,0 +1,154 @@
+---
+title: Installation
+description: Install and configure Mac SDK for macOS automation
+---
+
+## Prerequisites
+
+Before installing Mac SDK, ensure you have the following:
+
+- macOS 10.15 (Catalina) or later
+- Node.js 14.0.0 or later
+- Xcode Command Line Tools (install with `xcode-select --install`)
+
+## Installation methods
+
+<Tabs>
+  <Tab title="npm">
+    ```bash
+    npm install @mac-sdk/automation
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn add @mac-sdk/automation
+    ```
+  </Tab>
+  <Tab title="pnpm">
+    ```bash
+    pnpm add @mac-sdk/automation
+    ```
+  </Tab>
+</Tabs>
+
+## Verifying installation
+
+Create a test file `test.js`:
+
+```javascript test.js
+import { Mac } from "@mac-sdk/automation";
+
+async function main() {
+  const mac = new Mac();
+
+  // Test basic functionality
+  await mac.notification("Installation Successful", "Mac SDK is ready to use!");
+  console.log("Installation verified successfully!");
+}
+
+main().catch(console.error);
+```
+
+Run the test:
+
+```bash
+node test.js
+```
+
+## Configuration
+
+### Global configuration
+
+Create a configuration file at `~/.mac-sdk/config.json`:
+
+```json config.json
+{
+  "automation": {
+    "screenshotDir": "~/Pictures/mac-sdk",
+    "logLevel": "info"
+  },
+  "security": {
+    "requireAuth": true,
+    "allowedApps": ["Safari", "Notes", "Visual Studio Code"]
+  }
+}
+```
+
+### Environment variables
+
+```bash
+export MAC_SDK_LOG_LEVEL=debug
+export MAC_SDK_AUTO_UPDATE=true
+export MAC_SDK_TELEMETRY=anonymous
+```
+
+## Updating Mac SDK
+
+To update to the latest version:
+
+<Tabs>
+  <Tab title="npm">
+    ```bash
+    npm update @mac-sdk/automation
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn upgrade @mac-sdk/automation
+    ```
+  </Tab>
+  <Tab title="pnpm">
+    ```bash
+    pnpm update @mac-sdk/automation
+    ```
+  </Tab>
+</Tabs>
+
+## Troubleshooting
+
+### Permission errors
+
+If you encounter permission errors, grant the necessary permissions:
+
+<Steps>
+  <Step title="Open System Preferences">
+    Go to **System Preferences** > **Security & Privacy** > **Privacy**.
+  </Step>
+  <Step title="Add your terminal app">
+    Add your terminal app to **Accessibility**, **Screen Recording**, and **Automation**.
+  </Step>
+</Steps>
+
+### Module not found
+
+If you see `Cannot find module '@mac-sdk/automation'`:
+
+1. Verify the package is installed:
+   ```bash
+   npm list @mac-sdk/automation
+   ```
+2. Check your `package.json`:
+   ```json
+   "dependencies": {
+     "@mac-sdk/automation": "^0.1.0"
+   }
+   ```
+
+### TypeScript errors
+
+If you are using TypeScript, ensure you have the latest type definitions:
+
+```bash
+npm install --save-dev @types/node
+```
+
+## Next steps
+
+<Columns cols={2}>
+  <Card title="Quick start" icon="rocket" href="/quickstart">
+    Build your first automation script.
+  </Card>
+  <Card title="API reference" icon="book" href="/api-reference/overview">
+    Explore the complete API documentation.
+  </Card>
+</Columns>

@@ -1,0 +1,412 @@
+---
+title: Explorer guide
+description: Comprehensive guide to file system operations and system controls
+---
+
+The Explorer provides comprehensive file system operations and system controls for macOS automation. It combines traditional system functions with powerful file management capabilities.
+
+## Overview
+
+The Explorer is accessible through `mac.system` and provides two main categories of functionality:
+
+- **File system operations** - Create, read, write, copy, move, and delete files and directories
+- **System controls** - Clipboard, screenshots, notifications, text-to-speech, and application management
+
+## File system operations
+
+### Creating files and directories
+
+#### Create a file
+
+```javascript
+const mac = new Mac();
+
+// Create an empty file
+const filePath = await mac.system.createFile('new-file.txt');
+
+// Create a file with content
+const readmePath = await mac.system.createFile('README.md', `# My Project
+
+This is a sample project created with Mac SDK.
+
+## Features
+- File management
+- System automation
+`);
+
+console.log('Files created:', filePath, readmePath);
+```
+
+#### Create directories
+
+```javascript
+// Create a single directory
+const projectDir = await mac.system.createDirectory('my-project');
+
+// Create nested directories (recursive)
+const srcDir = await mac.system.createDirectory('my-project/src/components');
+const docsDir = await mac.system.createDirectory('my-project/docs/api');
+
+console.log('Directories created:', projectDir, srcDir, docsDir);
+```
+
+### Reading and writing files
+
+#### Read file content
+
+```javascript
+// Read text file
+const content = await mac.system.readFile('config.json');
+
+// Read with specific encoding
+const binaryContent = await mac.system.readFile('image.png', 'binary');
+
+// Parse JSON
+const config = JSON.parse(await mac.system.readFile('config.json'));
+```
+
+#### Write file content
+
+```javascript
+// Write text content
+await mac.system.writeFile('data.txt', 'Hello, World!');
+
+// Write JSON data
+const userData = { name: 'John', age: 30, city: 'San Francisco' };
+await mac.system.writeFile('user.json', JSON.stringify(userData, null, 2));
+```
+
+#### Append to files
+
+```javascript
+// Append to log file
+await mac.system.appendToFile('app.log', `\n[${new Date().toISOString()}] User logged in`);
+
+// Append multiple lines
+const newEntries = [
+  'New feature added',
+  'Bug fixed in authentication',
+  'Performance improvements'
+];
+
+for (const entry of newEntries) {
+  await mac.system.appendToFile('changelog.md', `\n- ${entry}`);
+}
+```
+
+### File and directory management
+
+#### Copy files and directories
+
+```javascript
+// Copy a single file
+await mac.system.copy('original.txt', 'backup.txt');
+
+// Copy a directory (recursive)
+await mac.system.copy('my-project', 'my-project-backup');
+
+// Copy with new name
+await mac.system.copy('config.json', 'backup/config-backup.json');
+```
+
+#### Move and rename
+
+```javascript
+// Rename a file
+await mac.system.move('old-name.txt', 'new-name.txt');
+
+// Move file to different directory
+await mac.system.move('temp-file.txt', 'archive/temp-file.txt');
+
+// Move entire directory
+await mac.system.move('old-project', 'archive/old-project');
+```
+
+#### Delete files and directories
+
+```javascript
+// Delete a file
+await mac.system.remove('temp-file.txt');
+
+// Delete a directory and all contents
+await mac.system.remove('old-project', { recursive: true });
+
+// Force delete without confirmation
+await mac.system.remove('stubborn-file.txt', { force: true });
+```
+
+### Directory operations
+
+#### List directory contents
+
+```javascript
+// List current directory
+const contents = await mac.system.listDirectory();
+
+// List specific directory
+const projectFiles = await mac.system.listDirectory('my-project');
+
+// Process directory contents
+for (const entry of projectFiles) {
+  if (entry.isDirectory) {
+    console.log(`${entry.name}/`);
+  } else {
+    console.log(entry.name);
+  }
+}
+```
+
+#### Check file existence
+
+```javascript
+if (await mac.system.exists('important-file.txt')) {
+  console.log('File exists!');
+  const content = await mac.system.readFile('important-file.txt');
+  console.log('Content:', content);
+} else {
+  console.log('File not found, creating it...');
+  await mac.system.createFile('important-file.txt', 'Default content');
+}
+```
+
+#### Get file information
+
+```javascript
+const stats = await mac.system.getInfo('my-file.txt');
+
+console.log('File Information:');
+console.log(`Size: ${stats.size} bytes`);
+console.log(`Created: ${stats.birthtime}`);
+console.log(`Modified: ${stats.mtime}`);
+console.log(`Accessed: ${stats.atime}`);
+console.log(`Is file: ${stats.isFile()}`);
+console.log(`Is directory: ${stats.isDirectory()}`);
+console.log(`Permissions: ${stats.mode.toString(8)}`);
+```
+
+### File search and pattern matching
+
+```javascript
+// Find all JavaScript files
+const jsFiles = await mac.system.findFiles('**/*.js');
+console.log('JavaScript files:', jsFiles);
+
+// Find all markdown files in docs directory
+const mdFiles = await mac.system.findFiles('*.md', 'docs');
+console.log('Markdown files in docs:', mdFiles);
+
+// Find files with specific patterns
+const testFiles = await mac.system.findFiles('**/*test*.js');
+const configFiles = await mac.system.findFiles('**/config.*');
+const imageFiles = await mac.system.findFiles('**/*.{png,jpg,jpeg,gif}');
+```
+
+## System controls
+
+### Clipboard operations
+
+```javascript
+// Copy text to clipboard
+await mac.system.copyToClipboard('Hello, clipboard!');
+
+// Get clipboard content
+const clipboardContent = await mac.system.getClipboard();
+console.log('Clipboard contains:', clipboardContent);
+
+// Copy file content to clipboard
+const fileContent = await mac.system.readFile('important-document.txt');
+await mac.system.copyToClipboard(fileContent);
+```
+
+### Screenshots
+
+```javascript
+// Take screenshot with default path
+const screenshotPath = await mac.system.screenshot();
+console.log('Screenshot saved to:', screenshotPath);
+
+// Take screenshot with custom path
+const customPath = await mac.system.screenshot('/Users/me/Desktop/my-screenshot.png');
+console.log('Custom screenshot saved to:', customPath);
+```
+
+### Notifications
+
+```javascript
+// Simple notification
+await mac.system.notification('Task Complete', 'Your automation finished successfully!');
+
+// Notification with custom sound
+await mac.system.notification(
+  'Important Alert',
+  'System maintenance required',
+  'Glass'
+);
+```
+
+### Text-to-speech
+
+```javascript
+// Basic text-to-speech
+await mac.system.speak('Hello, this is Mac SDK speaking!');
+
+// With custom voice
+await mac.system.speak('Welcome to the future of automation', 'Samantha');
+```
+
+### Application management
+
+```javascript
+// Open applications
+await mac.system.openApp('Calculator');
+await mac.system.openApp('Google Chrome');
+await mac.system.openApp('Visual Studio Code');
+```
+
+## Practical examples
+
+### Project setup automation
+
+```javascript
+async function setupProject(projectName) {
+  const mac = new Mac();
+
+  // Create project structure
+  await mac.system.createDirectory(`${projectName}/src`);
+  await mac.system.createDirectory(`${projectName}/tests`);
+  await mac.system.createDirectory(`${projectName}/docs`);
+
+  // Create package.json
+  const packageJson = {
+    name: projectName,
+    version: '1.0.0',
+    description: `A project created with Mac SDK`,
+    main: 'src/index.js',
+    scripts: {
+      test: 'jest',
+      start: 'node src/index.js'
+    }
+  };
+
+  await mac.system.writeFile(
+    `${projectName}/package.json`,
+    JSON.stringify(packageJson, null, 2)
+  );
+
+  // Create README
+  await mac.system.writeFile(`${projectName}/README.md`, `# ${projectName}
+
+A project created with Mac SDK automation.
+
+## Getting started
+
+\`\`\`bash
+npm install
+npm start
+\`\`\`
+`);
+
+  // Create main file
+  await mac.system.writeFile(
+    `${projectName}/src/index.js`,
+    `console.log('Hello, ${projectName}!');`
+  );
+
+  // Show completion notification
+  await mac.system.notification(
+    'Project Created',
+    `${projectName} has been set up successfully!`
+  );
+}
+
+await setupProject('my-awesome-project');
+```
+
+### File backup system
+
+```javascript
+async function backupDirectory(sourceDir, backupDir) {
+  const mac = new Mac();
+
+  if (!await mac.system.exists(sourceDir)) {
+    throw new Error(`Source directory ${sourceDir} does not exist`);
+  }
+
+  // Create backup directory with timestamp
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const backupPath = `${backupDir}/backup-${timestamp}`;
+
+  await mac.system.createDirectory(backupPath);
+
+  // Copy all files
+  await mac.system.copy(sourceDir, backupPath);
+
+  // Create backup log
+  const logEntry = `Backup created at ${new Date().toISOString()}\nSource: ${sourceDir}\nDestination: ${backupPath}\n`;
+  await mac.system.appendToFile(`${backupDir}/backup-log.txt`, logEntry);
+
+  await mac.system.notification('Backup Complete', `Backup created in ${backupPath}`);
+  return backupPath;
+}
+
+const backupPath = await backupDirectory('/Users/me/Documents', '/Users/me/Backups');
+```
+
+## Best practices
+
+### Error handling
+
+Always check for file existence before reading, and wrap operations in try/catch:
+
+```javascript
+async function safeFileOperation() {
+  const mac = new Mac();
+
+  try {
+    if (await mac.system.exists('config.json')) {
+      const content = await mac.system.readFile('config.json');
+      const config = JSON.parse(content);
+      console.log('Config loaded:', config);
+    } else {
+      console.log('Config file not found, creating default...');
+      await mac.system.createFile('config.json', '{}');
+    }
+  } catch (error) {
+    console.error('File operation failed:', error.message);
+    await mac.system.notification('Error', `File operation failed: ${error.message}`);
+  }
+}
+```
+
+### Path management
+
+```javascript
+// Always use absolute paths for important operations
+const projectRoot = '/Users/me/projects/my-app';
+const configPath = `${projectRoot}/config.json`;
+
+// Check paths before operations
+if (await mac.system.exists(projectRoot)) {
+  const files = await mac.system.listDirectory(projectRoot);
+  console.log('Project files:', files.map(f => f.name));
+}
+```
+
+### Performance considerations
+
+```javascript
+// Batch file operations when possible
+async function batchFileOperations() {
+  const mac = new Mac();
+  const files = ['file1.txt', 'file2.txt', 'file3.txt'];
+
+  // Process files in parallel
+  const operations = files.map(async (file) => {
+    const content = await mac.system.readFile(file);
+    return { file, content: content.length };
+  });
+
+  const results = await Promise.all(operations);
+  console.log('Processed files:', results);
+}
+```

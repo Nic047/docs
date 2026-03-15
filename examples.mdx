@@ -1,0 +1,267 @@
+---
+title: Examples
+description: Practical examples of Mac SDK in action
+---
+
+## Automated note taking
+
+Create a meeting notes template with the current date:
+
+```javascript
+import { Mac } from '@mac-sdk/automation';
+
+async function createMeetingNotes() {
+  const mac = new Mac();
+  const today = new Date().toLocaleDateString();
+
+  await mac.notes.create(
+    `Meeting Notes - ${today}`,
+    `# Team Meeting - ${today}
+
+## Agenda
+1.
+2.
+3.
+
+## Attendees
+-
+
+## Action Items
+- [ ]
+- [ ]`
+  );
+
+  await mac.notification('Notes Created', 'Your meeting notes are ready!');
+}
+
+createMeetingNotes().catch(console.error);
+```
+
+## Website screenshot tool
+
+Take screenshots of multiple websites and save them with timestamps:
+
+```javascript
+import { Mac } from '@mac-sdk/automation';
+
+async function captureWebsites() {
+  const mac = new Mac();
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const websites = [
+    'https://github.com',
+    'https://www.npmjs.com',
+    'https://developer.apple.com'
+  ];
+
+  for (const url of websites) {
+    await mac.openApp('Safari');
+    await mac.system.wait(2000);
+
+    await mac.system.type(`window.location.href = '${url}';`);
+    await mac.system.press('return');
+
+    // Wait for page to load
+    await mac.system.wait(3000);
+
+    // Take screenshot
+    const domain = new URL(url).hostname.replace('www.', '');
+    await mac.screenshot(`~/Desktop/${domain}-${timestamp}.png`);
+  }
+
+  await mac.notification('Screenshots Complete', 'All website screenshots have been saved to your Desktop');
+}
+
+captureWebsites().catch(console.error);
+```
+
+## Code snippet manager
+
+Save and retrieve code snippets from VS Code:
+
+```javascript
+import { Mac } from '@mac-sdk/automation';
+
+class SnippetManager {
+  constructor() {
+    this.mac = new Mac();
+    this.snippets = [];
+  }
+
+  async saveCurrentSnippet(name, description = '') {
+    const code = await this.mac.vscode.getActiveText();
+    const snippet = {
+      id: Date.now().toString(),
+      name,
+      description,
+      code,
+      language: this.mac.vscode.getActiveLanguage(),
+      createdAt: new Date().toISOString()
+    };
+
+    this.snippets.push(snippet);
+    await this._saveToNotes(snippet);
+    return snippet;
+  }
+
+  async _saveToNotes(snippet) {
+    const content = `# ${snippet.name}
+
+**Language**: ${snippet.language}
+**Saved**: ${new Date(snippet.createdAt).toLocaleString()}
+
+${snippet.description ? `> ${snippet.description}\n\n` : ''}
+\`\`\`${snippet.language}
+${snippet.code}
+\`\`\``;
+
+    await this.mac.notes.create(`Snippet: ${snippet.name}`, content);
+  }
+}
+
+// Example usage
+async function main() {
+  const manager = new SnippetManager();
+
+  await manager.saveCurrentSnippet(
+    'Array Shuffle',
+    'Efficiently shuffles an array in place using the Fisher-Yates algorithm.'
+  );
+
+  console.log('Code snippet saved to Notes!');
+}
+
+main().catch(console.error);
+```
+
+## Automated testing workflow
+
+Run tests and report results:
+
+```javascript
+import { Mac } from '@mac-sdk/automation';
+
+async function runTests() {
+  const mac = new Mac();
+
+  try {
+    // Open VS Code
+    await mac.openApp('Visual Studio Code');
+
+    // Open the terminal and run tests
+    await mac.vscode.runCommand('workbench.action.terminal.toggleTerminal');
+    await mac.system.wait(1000);
+    await mac.system.type('npm test');
+    await mac.system.press('return');
+
+    // Wait for tests to complete
+    await mac.system.wait(5000);
+
+    // Take a screenshot of the results
+    await mac.screenshot('~/Desktop/test-results.png');
+
+    // Notify with results
+    await mac.notification(
+      'Tests Completed',
+      'Test results have been saved to your Desktop',
+      'Glass'
+    );
+  } catch (error) {
+    await mac.notification(
+      'Test Error',
+      'An error occurred while running tests',
+      'Basso'
+    );
+    console.error('Test error:', error);
+  }
+}
+
+runTests();
+```
+
+## System monitoring dashboard
+
+Create a simple system monitoring tool:
+
+```javascript
+import { Mac } from '@mac-sdk/automation';
+
+class SystemMonitor {
+  constructor() {
+    this.mac = new Mac();
+    this.metrics = {
+      cpu: [],
+      memory: [],
+      timestamp: []
+    };
+    this.isMonitoring = false;
+  }
+
+  async startMonitoring(interval = 5000) {
+    this.isMonitoring = true;
+    console.log('Starting system monitoring...');
+
+    while (this.isMonitoring) {
+      const stats = await this._getSystemStats();
+      this._updateMetrics(stats);
+      this._displayDashboard();
+
+      await new Promise(resolve => setTimeout(resolve, interval));
+    }
+  }
+
+  stopMonitoring() {
+    this.isMonitoring = false;
+    console.log('\nMonitoring stopped');
+  }
+
+  async _getSystemStats() {
+    return {
+      cpu: Math.random() * 100,
+      memory: process.memoryUsage().heapUsed / 1024 / 1024,
+      timestamp: new Date().toLocaleTimeString()
+    };
+  }
+
+  _updateMetrics(stats) {
+    this.metrics.cpu.push(stats.cpu);
+    this.metrics.memory.push(stats.memory);
+    this.metrics.timestamp.push(stats.timestamp);
+
+    // Keep only the last 10 readings
+    if (this.metrics.cpu.length > 10) {
+      this.metrics.cpu.shift();
+      this.metrics.memory.shift();
+      this.metrics.timestamp.shift();
+    }
+  }
+
+  _displayDashboard() {
+    console.clear();
+    console.log('=== System Monitoring ===\n');
+    console.log(`CPU Usage:    ${this.metrics.cpu[this.metrics.cpu.length - 1].toFixed(1)}%`);
+    console.log(`Memory Usage: ${this.metrics.memory[this.metrics.memory.length - 1].toFixed(2)} MB\n`);
+
+    console.log('CPU Usage History:');
+    this.metrics.cpu.forEach((value, i) => {
+      const bar = '#'.repeat(Math.ceil(value / 10));
+      console.log(`${this.metrics.timestamp[i]} | ${bar} ${value.toFixed(1)}%`);
+    });
+
+    console.log('\nPress Ctrl+C to stop monitoring...');
+  }
+}
+
+// Example usage
+async function main() {
+  const monitor = new SystemMonitor();
+
+  process.on('SIGINT', () => {
+    monitor.stopMonitoring();
+    process.exit();
+  });
+
+  await monitor.startMonitoring(3000);
+}
+
+main().catch(console.error);
+```

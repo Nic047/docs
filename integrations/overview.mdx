@@ -1,0 +1,115 @@
+---
+title: Integrations overview
+description: Extend Mac SDK with powerful integrations
+---
+
+Mac SDK provides seamless integration with a wide range of services and tools to enhance your automation capabilities.
+
+## Authentication
+
+Most integrations require authentication. Mac SDK provides a secure way to manage credentials:
+
+```typescript
+import { Mac } from '@mac-sdk/automation';
+
+async function setupIntegration() {
+  const mac = new Mac();
+
+  // Securely store credentials
+  await mac.secrets.set('github', {
+    token: 'your-github-token',
+    username: 'your-username'
+  });
+
+  // Retrieve credentials when needed
+  const githubCreds = await mac.secrets.get('github');
+}
+```
+
+## Creating custom integrations
+
+Extend Mac SDK with your own integrations:
+
+```typescript
+import { BaseIntegration } from '@mac-sdk/automation';
+
+export class MyCustomIntegration extends BaseIntegration {
+  constructor(private apiKey: string) {
+    super('my-custom-service');
+  }
+
+  async fetchData() {
+    const response = await fetch('https://api.example.com/data', {
+      headers: { 'Authorization': `Bearer ${this.apiKey}` }
+    });
+    return response.json();
+  }
+}
+
+// Register the integration
+mac.integrations.register('myService', new MyCustomIntegration('api-key-here'));
+```
+
+## Webhook support
+
+Receive and process webhooks from external services:
+
+```typescript
+import { Mac } from '@mac-sdk/automation';
+
+const mac = new Mac();
+
+// Create a webhook endpoint
+const webhook = mac.webhooks.create({
+  path: '/github-webhook',
+  secret: 'your-webhook-secret'
+});
+
+// Handle webhook events
+webhook.on('push', async (payload) => {
+  console.log('Received push event:', payload);
+  await mac.notification('GitHub Push', 'New code was pushed to the repository');
+});
+
+// Start the webhook server
+webhook.start(3000);
+```
+
+## Rate limiting and throttling
+
+Handle API rate limits gracefully:
+
+```typescript
+import { Mac } from '@mac-sdk/automation';
+
+const mac = new Mac();
+
+// Configure rate limiting
+mac.integrations.configure('github', {
+  rateLimit: {
+    requestsPerMinute: 30,
+    retryAfter: 60
+  }
+});
+
+// All GitHub API calls will now be rate-limited
+const repos = await mac.integrations.github.getRepos();
+```
+
+## Error handling
+
+Consistent error handling across all integrations:
+
+```typescript
+try {
+  const result = await mac.integrations.someService.doSomething();
+} catch (error) {
+  if (error.isRateLimitError) {
+    console.log(`Rate limited. Try again in ${error.retryAfter} seconds`);
+  } else if (error.isAuthError) {
+    console.log('Authentication failed. Please check your credentials.');
+  } else {
+    console.error('An error occurred:', error);
+  }
+}
+```

@@ -1,0 +1,179 @@
+---
+title: Advanced automation
+description: Advanced automation techniques and patterns
+---
+
+## Event-driven automation
+
+Create responsive automations that react to system events:
+
+```typescript
+import { Mac, Automation } from '@mac-sdk/automation';
+
+const mac = new Mac();
+const automation = new Automation();
+
+// React to application launches
+automation.on('appDidLaunch', { app: 'Safari' }, async () => {
+  await mac.notification('Safari Launched', 'Customizing your browsing experience...');
+});
+
+// Monitor file system changes
+automation.on('fileChanged', {
+  path: '~/Downloads',
+  recursive: true,
+  eventTypes: ['add', 'modify']
+}, async (event) => {
+  console.log(`File ${event.path} was ${event.type}d`);
+});
+
+// Start the automation engine
+automation.start();
+```
+
+## Parallel task execution
+
+Run multiple automation tasks in parallel:
+
+```typescript
+import { Mac } from '@mac-sdk/automation';
+
+async function runParallelTasks() {
+  const mac = new Mac();
+
+  const tasks = [
+    mac.notes.create('Task 1', 'First parallel task'),
+    mac.vscode.openFile('~/project1/index.js'),
+    mac.system.screenshot('~/screenshots/parallel-1.png'),
+  ];
+
+  await Promise.all(tasks);
+
+  console.log('All tasks completed!');
+}
+```
+
+## Error handling and recovery
+
+Implement robust error handling for production automations:
+
+```typescript
+class AutomationManager {
+  private maxRetries = 3;
+
+  async withRetry<T>(fn: () => Promise<T>, retries = this.maxRetries): Promise<T> {
+    try {
+      return await fn();
+    } catch (error) {
+      if (retries > 0) {
+        console.warn(`Retrying (${retries} attempts left)...`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return this.withRetry(fn, retries - 1);
+      }
+      throw error;
+    }
+  }
+
+  async safeAutomation() {
+    const mac = new Mac();
+
+    try {
+      await this.withRetry(async () => {
+        await mac.openApp('Safari');
+      });
+    } catch (error) {
+      await mac.notification('Automation Failed', 'Please check the logs for details', 'Sosumi');
+      throw error;
+    }
+  }
+}
+```
+
+## State management
+
+Manage state across automation runs:
+
+```typescript
+import { Mac } from '@mac-sdk/automation';
+import fs from 'fs/promises';
+import path from 'path';
+
+class StateManager {
+  private statePath = path.join(process.env.HOME || '~', '.mac-sdk/state.json');
+  private state: Record<string, any> = {};
+
+  constructor(private mac: Mac) {}
+
+  async load() {
+    try {
+      const data = await fs.readFile(this.statePath, 'utf-8');
+      this.state = JSON.parse(data);
+    } catch {
+      this.state = {};
+    }
+    return this;
+  }
+
+  async save() {
+    await fs.mkdir(path.dirname(this.statePath), { recursive: true });
+    await fs.writeFile(this.statePath, JSON.stringify(this.state, null, 2));
+  }
+
+  get<T = any>(key: string, defaultValue?: T): T {
+    return (this.state[key] ?? defaultValue) as T;
+  }
+
+  set(key: string, value: any) {
+    this.state[key] = value;
+  }
+}
+
+// Usage
+async function main() {
+  const mac = new Mac();
+  const state = await new StateManager(mac).load();
+
+  const lastRun = state.get('lastRun', 0);
+  state.set('lastRun', Date.now());
+
+  console.log(`Last run: ${new Date(lastRun).toLocaleString()}`);
+
+  await state.save();
+}
+```
+
+## Performance optimization
+
+Optimize your automations for speed and reliability:
+
+```typescript
+import { Mac } from '@mac-sdk/automation';
+
+class OptimizedAutomation {
+  private cache = new Map<string, any>();
+
+  constructor(private mac: Mac) {}
+
+  async getCached<T>(key: string, ttl: number, fn: () => Promise<T>): Promise<T> {
+    const cached = this.cache.get(key);
+    const now = Date.now();
+
+    if (cached && (now - cached.timestamp < ttl)) {
+      return cached.value;
+    }
+
+    const value = await fn();
+    this.cache.set(key, { value, timestamp: now });
+    return value;
+  }
+
+  async batchOperations(operations: Array<() => Promise<void>>, batchSize = 5) {
+    for (let i = 0; i < operations.length; i += batchSize) {
+      const batch = operations.slice(i, i + batchSize);
+      await Promise.all(batch.map(op => op()));
+    }
+  }
+}
+```
+
+These advanced patterns help you build robust, maintainable, and efficient automations with Mac SDK.
