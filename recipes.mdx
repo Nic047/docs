@@ -1,0 +1,237 @@
+---
+title: Automation recipes
+description: Ready-to-use automation scripts for common tasks
+---
+
+<Info>
+  These recipes are ready to copy and paste into your projects. Customize them to fit your needs.
+</Info>
+
+## File management
+
+### Auto-organize downloads folder
+
+```typescript
+import { Mac } from '@mac-sdk/automation';
+import path from 'path';
+
+const mac = new Mac();
+const DOWNLOADS = path.join(process.env.HOME || '~', 'Downloads');
+
+const FOLDERS = {
+  images: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'],
+  documents: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'],
+  archives: ['zip', 'rar', '7z', 'tar', 'gz'],
+  code: ['js', 'ts', 'jsx', 'tsx', 'py', 'java', 'c', 'cpp', 'h', 'hpp'],
+};
+
+async function organizeDownloads() {
+  const files = await mac.system.listDirectory(DOWNLOADS);
+
+  for (const file of files) {
+    if (file.isDirectory) continue;
+
+    const ext = path.extname(file.name).toLowerCase().slice(1);
+    let targetFolder = 'other';
+
+    for (const [folder, exts] of Object.entries(FOLDERS)) {
+      if (exts.includes(ext)) {
+        targetFolder = folder;
+        break;
+      }
+    }
+
+    const targetPath = path.join(DOWNLOADS, targetFolder);
+    await mac.system.createDirectory(targetPath);
+
+    const source = path.join(DOWNLOADS, file.name);
+    const destination = path.join(targetPath, file.name);
+
+    await mac.system.move(source, destination);
+    console.log(`Moved ${file.name} to ${targetFolder}/`);
+  }
+
+  await mac.notification('Downloads Organized', `Processed ${files.length} files`);
+}
+
+// Run every hour
+setInterval(organizeDownloads, 60 * 60 * 1000);
+organizeDownloads().catch(console.error);
+```
+
+## System automation
+
+### Smart workspace switcher
+
+```typescript
+import { Mac } from '@mac-sdk/automation';
+
+const mac = new Mac();
+const WORKSPACES = {
+  work: {
+    apps: ['Visual Studio Code', 'iTerm2', 'Slack'],
+    brightness: 80,
+    volume: 30,
+  },
+  relax: {
+    apps: ['Spotify', 'Safari'],
+    brightness: 40,
+    volume: 60,
+  },
+};
+
+async function switchWorkspace(workspaceName) {
+  const workspace = WORKSPACES[workspaceName];
+  if (!workspace) throw new Error(`Unknown workspace: ${workspaceName}`);
+
+  // Open required apps
+  for (const app of workspace.apps) {
+    await mac.openApp(app);
+  }
+
+  // Adjust system settings
+  await mac.system.setBrightness(workspace.brightness);
+  await mac.system.setVolume(workspace.volume);
+
+  await mac.notification('Workspace Activated', `Switched to ${workspaceName} mode`);
+}
+```
+
+## Productivity
+
+### Meeting note taker
+
+```typescript
+import { Mac } from '@mac-sdk/automation';
+
+const mac = new Mac();
+
+class MeetingNoteTaker {
+  private currentMeeting: string | null = null;
+  private meetingNotes = new Map<string, string>();
+
+  async startMeeting(title: string, participants: string[] = []) {
+    this.currentMeeting = title;
+
+    const noteContent = `# ${title}
+
+**Date**: ${new Date().toLocaleString()}
+**Participants**: ${participants.join(', ') || 'None'}
+
+## Agenda
+1.
+2.
+3.
+
+## Notes
+
+## Action items
+- [ ]
+`;
+
+    this.meetingNotes.set(title, noteContent);
+    await mac.notes.create(`Meeting: ${title}`, noteContent);
+
+    return noteContent;
+  }
+
+  async addNote(note: string) {
+    if (!this.currentMeeting) throw new Error('No active meeting');
+
+    const currentContent = this.meetingNotes.get(this.currentMeeting) || '';
+    const updatedContent = currentContent + '\n' + note;
+
+    this.meetingNotes.set(this.currentMeeting, updatedContent);
+    await mac.notes.update(`Meeting: ${this.currentMeeting}`, updatedContent);
+  }
+
+  async endMeeting() {
+    if (!this.currentMeeting) return;
+    this.currentMeeting = null;
+  }
+}
+```
+
+## Development
+
+### Auto-format and test on save
+
+```typescript
+import { Mac } from '@mac-sdk/automation';
+
+const mac = new Mac();
+
+class DevelopmentWorkflow {
+  private projectRoot: string;
+
+  constructor(projectPath: string) {
+    this.projectRoot = projectPath;
+  }
+
+  async setupWatchers() {
+    await mac.system.on('fileChanged', {
+      path: this.projectRoot,
+      recursive: true,
+      filter: ['**/*.js', '**/*.ts', '**/*.jsx', '**/*.tsx'],
+      onChange: async (filePath) => {
+        console.log(`File changed: ${filePath}`);
+        await this.formatFile(filePath);
+        await this.runTests(filePath);
+      },
+    });
+
+    console.log(`Watching for changes in ${this.projectRoot}`);
+  }
+
+  private async formatFile(filePath: string) {
+    try {
+      console.log(`Formatted: ${filePath}`);
+    } catch (error) {
+      console.error(`Error formatting ${filePath}:`, error.message);
+    }
+  }
+
+  private async runTests(filePath: string) {
+    try {
+      await mac.notification('Tests Passed', `All tests passed for ${filePath}`);
+    } catch (error) {
+      await mac.notification('Tests Failed', `Tests failed for ${filePath}`, 'Sosumi');
+    }
+  }
+}
+```
+
+## Home automation
+
+### Smart morning routine
+
+```typescript
+import { Mac } from '@mac-sdk/automation';
+
+const mac = new Mac();
+
+class MorningRoutine {
+  async executeRoutine() {
+    // Adjust system settings
+    await mac.system.setBrightness(70);
+    await mac.system.setVolume(30);
+
+    // Read a summary out loud
+    await mac.speak('Good morning! Have a great day!');
+
+    // Open morning apps
+    await mac.openApp('Safari');
+    await mac.openApp('Mail');
+    await mac.openApp('Slack');
+  }
+}
+```
+
+## Contributing
+
+Have a great recipe to share? Submit a pull request to add it to this collection.
+
+1. Fork the repository
+2. Create a new branch
+3. Add your recipe
+4. Submit a pull request

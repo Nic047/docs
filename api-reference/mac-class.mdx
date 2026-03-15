@@ -1,0 +1,205 @@
+---
+title: Mac class
+description: The main entry point for Mac SDK
+---
+
+The `Mac` class is the primary interface for interacting with Mac SDK. It provides access to system controls, built-in apps, and automation features.
+
+## Import
+
+```typescript
+import { Mac } from '@mac-sdk/automation';
+```
+
+## Constructor
+
+```typescript
+const mac = new Mac(options?: MacOptions);
+```
+
+### Parameters
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `automation.screenshotDir` | `string` | Directory to save screenshots (default: `~/Pictures/mac-sdk`) |
+| `automation.logLevel` | `string` | Logging level (`'error'`, `'warn'`, `'info'`, `'debug'`) |
+| `security.requireAuth` | `boolean` | Require authentication for sensitive operations |
+| `security.allowedApps` | `string[]` | Whitelist of allowed applications |
+
+## Properties
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `system` | `SystemControls` | Access system-level controls like clipboard, notifications, and file operations |
+| `apps` | `AppManager` | Manage and access application instances |
+| `notes` | `NotesApp` | Built-in Notes app integration |
+| `vscode` | `VSCodeApp` | Built-in VS Code integration |
+
+## Methods
+
+### `app(name: string): BaseApp`
+
+Get an application instance by name.
+
+```typescript
+const notes = mac.app('notes');
+```
+
+### `copyToClipboard(text: string): Promise<void>`
+
+Copy text to the system clipboard.
+
+```typescript
+await mac.copyToClipboard('Hello, world!');
+```
+
+### `getClipboard(): Promise<string>`
+
+Get the current content of the system clipboard.
+
+```typescript
+const content = await mac.getClipboard();
+console.log('Clipboard:', content);
+```
+
+### `screenshot(path?: string): Promise<string>`
+
+Take a screenshot of the screen.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `path` | `string` | No | Save path for the screenshot |
+
+**Returns:** Path to the saved screenshot.
+
+```typescript
+// Full screen
+const fullPath = await mac.screenshot();
+
+// Custom path
+const customPath = await mac.screenshot('~/Desktop/screenshot.png');
+```
+
+### `notification(title: string, message: string, sound?: string): Promise<void>`
+
+Display a system notification.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `title` | `string` | Yes | Notification title |
+| `message` | `string` | Yes | Notification message |
+| `sound` | `string` | No | Sound to play (default: `'default'`) |
+
+```typescript
+await mac.notification(
+  'Task Complete',
+  'The operation finished successfully',
+  'Ping'
+);
+```
+
+### `speak(text: string, voice?: string): Promise<void>`
+
+Convert text to speech.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `text` | `string` | Yes | Text to speak |
+| `voice` | `string` | No | Voice to use (default: `'Alex'`) |
+
+```typescript
+await mac.speak('Hello, I am your Mac assistant', 'Samantha');
+```
+
+### `openApp(name: string): Promise<void>`
+
+Open an application.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | `string` | Yes | Application name |
+
+```typescript
+await mac.openApp('Safari');
+```
+
+## Events
+
+The `Mac` class extends `EventEmitter` and emits the following events:
+
+### `ready`
+
+Emitted when the Mac instance is fully initialized.
+
+```typescript
+mac.on('ready', () => {
+  console.log('Mac SDK is ready!');
+});
+```
+
+### `error`
+
+Emitted when an error occurs.
+
+```typescript
+mac.on('error', (error) => {
+  console.error('An error occurred:', error);
+});
+```
+
+### `appDidLaunch`
+
+Emitted when an application is launched.
+
+```typescript
+mac.on('appDidLaunch', (appInfo) => {
+  console.log(`${appInfo.name} (${appInfo.pid}) was launched`);
+});
+```
+
+## Error handling
+
+All methods return Promises that reject with an `Error` object containing:
+
+- `message`: Error description
+- `code`: Error code (e.g., `'ENOENT'`, `'EPERM'`)
+- `details`: Additional error details
+
+```typescript
+try {
+  await mac.openApp('NonExistentApp');
+} catch (error) {
+  console.error(`Error (${error.code}): ${error.message}`);
+  if (error.details) {
+    console.error('Details:', error.details);
+  }
+}
+```
+
+## Example
+
+```typescript
+import { Mac } from '@mac-sdk/automation';
+
+async function main() {
+  const mac = new Mac();
+
+  // Take a screenshot
+  const screenshotPath = await mac.screenshot('~/Desktop/desktop.png');
+  console.log(`Screenshot saved to: ${screenshotPath}`);
+
+  // Create a note
+  await mac.notes.create('Automation Log', 'Script executed successfully.');
+
+  // Show notification
+  await mac.notification('Done', 'Automation complete!');
+}
+
+main().catch(console.error);
+```
+
+## See also
+
+- [API reference](/api-reference/overview) - Complete method documentation
+- [Explorer guide](/guides/explorer) - File system operations and system controls
+- [Advanced automation](/guides/advanced-automation) - Event-driven workflows

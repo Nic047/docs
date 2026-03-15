@@ -1,80 +1,141 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick start
+description: Get started with Mac SDK in minutes
 ---
 
-## Get started in three steps
+This guide walks you through creating a simple automation script with Mac SDK.
 
-Get your documentation site running locally and make your first customization.
+## Prerequisites
 
-### Step 1: Set up your local environment
+- Node.js 14.0.0 or later
+- macOS 10.15 (Catalina) or later
+- Xcode Command Line Tools (install with `xcode-select --install`)
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+## Installation
 
-### Step 2: Deploy your changes
+Install the Mac SDK package using npm:
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+<Tabs>
+  <Tab title="npm">
+    ```bash
+    npm install @mac-sdk/automation
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn add @mac-sdk/automation
+    ```
+  </Tab>
+  <Tab title="pnpm">
+    ```bash
+    pnpm add @mac-sdk/automation
+    ```
+  </Tab>
+</Tabs>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Your first script
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Create a new file called `automate.js`:
 
-### Step 3: Go live
+```javascript automate.js
+import { Mac } from '@mac-sdk/automation';
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+async function main() {
+  // Initialize the Mac SDK
+  const mac = new Mac();
+
+  try {
+    // Open Safari
+    console.log('Opening Safari...');
+    await mac.openApp('Safari');
+
+    // Create a new note
+    console.log('Creating a note...');
+    await mac.notes.create('My First Note', 'Hello from Mac SDK!');
+
+    // Take a screenshot
+    console.log('Taking a screenshot...');
+    const screenshotPath = await mac.screenshot('~/Desktop/mac-sdk-demo.png');
+
+    // Show a notification
+    await mac.notification(
+      'Automation Complete',
+      'Your Mac SDK script ran successfully!',
+      'Ping'
+    );
+
+    console.log(`Screenshot saved to: ${screenshotPath}`);
+  } catch (error) {
+    console.error('An error occurred:', error);
+  }
+}
+
+// Run the script
+main();
+```
+
+## Running the script
+
+```bash
+node automate.js
+```
+
+## What to expect
+
+<Steps>
+  <Step title="Safari opens">
+    The Safari browser launches on your Mac.
+  </Step>
+  <Step title="Note created">
+    A new note titled "My First Note" appears in the Notes app.
+  </Step>
+  <Step title="Screenshot saved">
+    A screenshot of your screen is saved to your Desktop.
+  </Step>
+  <Step title="Notification appears">
+    A system notification confirms the script ran successfully.
+  </Step>
+</Steps>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
+<Columns cols={2}>
+  <Card title="API reference" icon="book" href="/api-reference/overview">
+    Explore the complete API documentation.
+  </Card>
+  <Card title="Examples" icon="code" href="/examples">
+    See more automation ideas and patterns.
+  </Card>
+  <Card title="Explorer guide" icon="folder-open" href="/guides/explorer">
+    Learn about file system operations and system controls.
+  </Card>
+  <Card title="Advanced automation" icon="robot" href="/guides/advanced-automation">
+    Build event-driven and parallel automation workflows.
+  </Card>
+</Columns>
 
-<CardGroup cols={2}>
+## Troubleshooting
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+### Missing permissions
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+If you encounter permission errors, grant the necessary permissions in:
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
+<Steps>
+  <Step title="Open System Preferences">
+    Navigate to **System Preferences** > **Security & Privacy** > **Privacy**.
+  </Step>
+  <Step title="Add your terminal app">
+    Add your terminal app (e.g., Terminal or iTerm) to:
+    - **Accessibility**
+    - **Screen Recording**
+    - **Automation**
+  </Step>
+</Steps>
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
+### Module not found
 
-</CardGroup>
+If you see `Cannot find module '@mac-sdk/automation'`:
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+1. Run `npm install` in your project directory.
+2. Verify the package name in your `package.json`.
+3. Check your Node.js version with `node -v` (should be 14.0.0 or higher).

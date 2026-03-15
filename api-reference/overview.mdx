@@ -1,0 +1,416 @@
+---
+title: API reference
+description: Complete API documentation for Mac SDK
+---
+
+## Mac class
+
+The main entry point for all automation tasks.
+
+```typescript
+import { Mac } from '@mac-sdk/automation';
+const mac = new Mac();
+```
+
+### Methods
+
+#### `app(name: string): BaseApp`
+
+Get an application instance by name.
+
+```javascript
+const notes = mac.app('notes');
+```
+
+#### `copyToClipboard(text: string): Promise<void>`
+
+Copy text to the system clipboard.
+
+```javascript
+await mac.copyToClipboard('Hello, world!');
+```
+
+#### `getClipboard(): Promise<string>`
+
+Get the current content of the system clipboard.
+
+```javascript
+const content = await mac.getClipboard();
+console.log('Clipboard:', content);
+```
+
+<Info>
+  For the full Mac class reference including constructor options, events, and error handling, see the [Mac class](/api-reference/mac-class) page.
+</Info>
+
+## Explorer
+
+Access file system operations and system-level functionality through `mac.system`. The Explorer provides comprehensive file management capabilities alongside system controls.
+
+### System controls
+
+#### `screenshot(path?: string): Promise<string>`
+
+Take a screenshot of the entire screen.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `path` | `string` | No | Path to save the screenshot |
+
+**Returns:** Path to the saved screenshot.
+
+```javascript
+const screenshotPath = await mac.system.screenshot();
+// or specify a custom path
+const customPath = await mac.system.screenshot('/Users/me/Desktop/screenshot.png');
+```
+
+#### `notification(title: string, message: string, sound?: string): Promise<void>`
+
+Show a system notification.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `title` | `string` | Yes | Notification title |
+| `message` | `string` | Yes | Notification message |
+| `sound` | `string` | No | Sound to play (default: `'default'`) |
+
+```javascript
+await mac.system.notification('Task Complete', 'Your automation finished successfully!');
+```
+
+#### `speak(text: string, voice?: string): Promise<void>`
+
+Convert text to speech.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `text` | `string` | Yes | Text to speak |
+| `voice` | `string` | No | Voice to use (default: `'Alex'`) |
+
+```javascript
+await mac.system.speak('Hello, this is Mac SDK speaking!');
+```
+
+#### `openApp(appName: string): Promise<void>`
+
+Open an application by name.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `appName` | `string` | Yes | Name of the application to open |
+
+```javascript
+await mac.system.openApp('Calculator');
+```
+
+### File system operations
+
+#### `createFile(filePath: string, content?: string): Promise<string>`
+
+Create a new file with optional content.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `filePath` | `string` | Yes | Path where the file should be created |
+| `content` | `string` | No | Initial content (default: empty string) |
+
+**Returns:** Absolute path to the created file.
+
+```javascript
+// Create an empty file
+const filePath = await mac.system.createFile('new-file.txt');
+
+// Create a file with content
+const contentPath = await mac.system.createFile('readme.md', '# My Project\nThis is a sample file.');
+```
+
+#### `createDirectory(dirPath: string): Promise<string>`
+
+Create a new directory (with recursive creation).
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `dirPath` | `string` | Yes | Path where the directory should be created |
+
+**Returns:** Absolute path to the created directory.
+
+```javascript
+// Create a single directory
+const dirPath = await mac.system.createDirectory('my-folder');
+
+// Create nested directories
+const nestedPath = await mac.system.createDirectory('projects/my-app/src');
+```
+
+#### `readFile(filePath: string, encoding?: string): Promise<string>`
+
+Read the content of a file.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `filePath` | `string` | Yes | Path to the file to read |
+| `encoding` | `string` | No | File encoding (default: `'utf8'`) |
+
+**Returns:** File content as string.
+
+```javascript
+const content = await mac.system.readFile('config.json');
+const binaryContent = await mac.system.readFile('image.png', 'binary');
+```
+
+#### `writeFile(filePath: string, content: string, encoding?: string): Promise<string>`
+
+Write content to a file (overwrites existing content).
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `filePath` | `string` | Yes | Path where the file should be written |
+| `content` | `string` | Yes | Content to write to the file |
+| `encoding` | `string` | No | File encoding (default: `'utf8'`) |
+
+**Returns:** Absolute path to the written file.
+
+```javascript
+await mac.system.writeFile('data.json', JSON.stringify({ name: 'John', age: 30 }));
+```
+
+#### `appendToFile(filePath: string, content: string): Promise<string>`
+
+Append content to an existing file.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `filePath` | `string` | Yes | Path to the file to append to |
+| `content` | `string` | Yes | Content to append |
+
+**Returns:** Absolute path to the file.
+
+```javascript
+await mac.system.appendToFile('log.txt', '\nNew log entry at ' + new Date());
+```
+
+#### `copy(source: string, destination: string): Promise<string>`
+
+Copy a file or directory to a new location.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `source` | `string` | Yes | Path to the source file or directory |
+| `destination` | `string` | Yes | Path where the copy should be created |
+
+**Returns:** Absolute path to the copied item.
+
+```javascript
+// Copy a file
+await mac.system.copy('original.txt', 'backup.txt');
+
+// Copy a directory
+await mac.system.copy('my-project', 'my-project-backup');
+```
+
+#### `move(source: string, destination: string): Promise<string>`
+
+Move or rename a file or directory.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `source` | `string` | Yes | Path to the source file or directory |
+| `destination` | `string` | Yes | New path for the item |
+
+**Returns:** Absolute path to the moved item.
+
+```javascript
+// Rename a file
+await mac.system.move('old-name.txt', 'new-name.txt');
+
+// Move to a different directory
+await mac.system.move('file.txt', 'archive/file.txt');
+```
+
+#### `remove(path: string, options?: object): Promise<boolean>`
+
+Delete a file or directory.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `path` | `string` | Yes | Path to the file or directory to delete |
+| `options.recursive` | `boolean` | No | Delete directories recursively (default: `true`) |
+| `options.force` | `boolean` | No | Force deletion without confirmation (default: `false`) |
+
+**Returns:** `true` if deletion was successful.
+
+```javascript
+// Delete a file
+await mac.system.remove('temp-file.txt');
+
+// Delete a directory and all contents
+await mac.system.remove('old-project', { recursive: true });
+
+// Force delete without confirmation
+await mac.system.remove('stubborn-file.txt', { force: true });
+```
+
+#### `listDirectory(dirPath?: string): Promise<Array>`
+
+List the contents of a directory.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `dirPath` | `string` | No | Path to the directory to list (default: current directory) |
+
+**Returns:** Array of directory entries with `name` and `isDirectory` properties.
+
+```javascript
+const contents = await mac.system.listDirectory('/Users/me/Documents');
+contents.forEach(entry => {
+  console.log(`${entry.name} (${entry.isDirectory ? 'directory' : 'file'})`);
+});
+```
+
+#### `exists(path: string): Promise<boolean>`
+
+Check if a file or directory exists.
+
+```javascript
+if (await mac.system.exists('important-file.txt')) {
+  console.log('File exists!');
+}
+```
+
+#### `getInfo(path: string): Promise<fs.Stats>`
+
+Get detailed information about a file or directory.
+
+```javascript
+const stats = await mac.system.getInfo('my-file.txt');
+console.log(`Size: ${stats.size} bytes`);
+console.log(`Created: ${stats.birthtime}`);
+console.log(`Modified: ${stats.mtime}`);
+console.log(`Is file: ${stats.isFile()}`);
+console.log(`Is directory: ${stats.isDirectory()}`);
+```
+
+#### `findFiles(pattern: string, directory?: string): Promise<string[]>`
+
+Find files matching a glob pattern.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `pattern` | `string` | Yes | Glob pattern to match (e.g., `'*.js'`, `'**/*.md'`) |
+| `directory` | `string` | No | Directory to search in (default: current directory) |
+
+**Returns:** Array of matching file paths.
+
+```javascript
+// Find all JavaScript files
+const jsFiles = await mac.system.findFiles('**/*.js');
+
+// Find all markdown files in docs directory
+const mdFiles = await mac.system.findFiles('*.md', 'docs');
+
+// Find all files with 'test' in the name
+const testFiles = await mac.system.findFiles('**/*test*');
+```
+
+### Clipboard operations
+
+#### `copyToClipboard(text: string): Promise<void>`
+
+Copy text to the system clipboard.
+
+```javascript
+await mac.system.copyToClipboard('Hello, clipboard!');
+```
+
+#### `getClipboard(): Promise<string>`
+
+Get the current content of the system clipboard.
+
+```javascript
+const clipboardContent = await mac.system.getClipboard();
+console.log('Clipboard contains:', clipboardContent);
+```
+
+## Built-in apps
+
+### Notes app
+
+Access through `mac.notes`.
+
+| Method | Description |
+| --- | --- |
+| `create(title, content)` | Create a new note with the given title and content |
+| `list()` | List all notes |
+| `get(id)` | Get a note by ID |
+| `update(id, content)` | Update a note's content |
+| `delete(id)` | Delete a note |
+
+### VS Code app
+
+Access through `mac.vscode`.
+
+| Method | Description |
+| --- | --- |
+| `openFile(filePath, options?)` | Open a file in VS Code (supports `line` and `column` options) |
+| `type(text)` | Type text at the current cursor position |
+| `save()` | Save the current file |
+| `runCommand(commandId)` | Run a VS Code command by ID |
+
+## Automation
+
+Create and manage desktop automations using the `Automation` class:
+
+```javascript
+import { Automation } from '@mac-sdk/automation';
+
+const automation = new Automation();
+
+// Mouse and keyboard control
+await automation.click(100, 200);
+await automation.type('Hello, World!');
+await automation.pressKey(Key.Enter);
+await automation.pressKeyCombo(Key.LeftSuper, Key.Space);
+```
+
+### Automation methods
+
+| Method | Description |
+| --- | --- |
+| `click(x, y)` | Click at a specified pixel coordinate |
+| `scrollUp(pixels)` | Scroll the mouse wheel up |
+| `scrollDown(pixels)` | Scroll the mouse wheel down |
+| `scrollLeft(pixels)` | Scroll the mouse wheel left |
+| `scrollRight(pixels)` | Scroll the mouse wheel right |
+| `type(text)` | Type a given string |
+| `pressKey(...keys)` | Press a specific key or key combination |
+| `pressKeyCombo(...keys)` | Press a key combination (shortcut) |
+| `releaseKey(...keys)` | Release a specific key |
+| `pause(ms)` | Pause execution for a specified duration (default: 500ms) |
+
+## Extending the SDK
+
+To add support for a new application, extend the `BaseApp` class:
+
+```javascript
+import { BaseApp } from '@mac-sdk/automation';
+
+export class MyApp extends BaseApp {
+  constructor() {
+    super('myapp');
+  }
+
+  async customMethod() {
+    // Implementation
+  }
+}
+```
+
+Then register it with the `AppManager`:
+
+```javascript
+const myApp = new MyApp();
+mac.apps.register('myapp', myApp);
+```
+
+You can access it via `mac.app('myapp')` or add it to the `_setupBuiltInApps` method in the Mac class for automatic initialization.
