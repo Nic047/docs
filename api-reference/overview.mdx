@@ -16,10 +16,12 @@ const mac = new Mac();
 
 #### `app(name: string): BaseApp`
 
-Get an application instance by name.
+Get an application instance by name. Returns a cached `GenericApp` instance that inherits all `BaseApp` methods.
 
 ```javascript
-const notes = mac.app('notes');
+const safari = mac.app('Safari');
+await safari.activate();
+console.log('Is running:', safari.isRunning());
 ```
 
 #### `copyToClipboard(text: string): Promise<void>`
@@ -40,7 +42,7 @@ console.log('Clipboard:', content);
 ```
 
 <Info>
-  For the full Mac class reference including constructor options, events, and error handling, see the [Mac class](/api-reference/mac-class) page.
+  For the full Mac class reference including properties and error handling, see the [Mac class](/api-reference/mac-class) page.
 </Info>
 
 ## Explorer
@@ -51,11 +53,11 @@ Access file system operations and system-level functionality through `mac.system
 
 #### `screenshot(path?: string): Promise<string>`
 
-Take a screenshot of the entire screen.
+Take an interactive screenshot of the screen.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `path` | `string` | No | Path to save the screenshot |
+| `path` | `string` | No | Path to save the screenshot (default: timestamped file in current directory) |
 
 **Returns:** Path to the saved screenshot.
 
@@ -102,6 +104,125 @@ Open an application by name.
 
 ```javascript
 await mac.system.openApp('Calculator');
+```
+
+#### `setVolume(level: number): Promise<void>`
+
+Set the system volume.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `level` | `number` | Yes | Volume level (0-100) |
+
+```javascript
+await mac.system.setVolume(50);
+```
+
+#### `setBrightness(level: number): Promise<void>`
+
+Set the screen brightness. Requires the `brightness` CLI tool to be installed.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `level` | `number` | Yes | Brightness level (0-1) |
+
+```javascript
+await mac.system.setBrightness(0.7);
+```
+
+#### `sleep(): Promise<void>`
+
+Put the Mac to sleep.
+
+```javascript
+await mac.system.sleep();
+```
+
+#### `lock(): Promise<void>`
+
+Lock the screen.
+
+```javascript
+await mac.system.lock();
+```
+
+#### `toggleWiFi(): Promise<void>`
+
+Toggle Wi-Fi off and back on.
+
+```javascript
+await mac.system.toggleWiFi();
+```
+
+#### `getWiFiNetworks(): Promise<string[]>`
+
+List preferred wireless networks.
+
+```javascript
+const networks = await mac.system.getWiFiNetworks();
+console.log('Preferred networks:', networks);
+```
+
+#### `connectWiFi(network: string, password: string): Promise<void>`
+
+Connect to a Wi-Fi network.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `network` | `string` | Yes | Network name (SSID) |
+| `password` | `string` | Yes | Network password |
+
+```javascript
+await mac.system.connectWiFi('MyNetwork', 'my-password');
+```
+
+#### `toggleBluetooth(): Promise<void>`
+
+Toggle Bluetooth on or off. Requires `blueutil` to be installed.
+
+```javascript
+await mac.system.toggleBluetooth();
+```
+
+#### `getDiskSpace(): Promise<object>`
+
+Get disk usage information.
+
+**Returns:** Object with `total`, `used`, `available`, and `percentage` properties.
+
+```javascript
+const disk = await mac.system.getDiskSpace();
+console.log(`Disk: ${disk.used} used of ${disk.total} (${disk.percentage})`);
+```
+
+#### `getMemoryUsage(): Promise<string>`
+
+Get memory statistics via `vm_stat`.
+
+```javascript
+const memStats = await mac.system.getMemoryUsage();
+console.log(memStats);
+```
+
+#### `getCPUUsage(): Promise<string>`
+
+Get current CPU usage.
+
+```javascript
+const cpuUsage = await mac.system.getCPUUsage();
+console.log(cpuUsage);
+```
+
+#### `setDesktopWallpaper(imagePath: string): Promise<void>`
+
+Set the desktop wallpaper.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `imagePath` | `string` | Yes | Absolute path to the image file |
+
+```javascript
+await mac.system.setDesktopWallpaper('/Users/me/Pictures/wallpaper.jpg');
 ```
 
 ### File system operations
@@ -192,7 +313,7 @@ await mac.system.appendToFile('log.txt', '\nNew log entry at ' + new Date());
 
 #### `copy(source: string, destination: string): Promise<string>`
 
-Copy a file or directory to a new location.
+Copy a file or directory to a new location. Directories are copied recursively.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -259,12 +380,12 @@ List the contents of a directory.
 | --- | --- | --- | --- |
 | `dirPath` | `string` | No | Path to the directory to list (default: current directory) |
 
-**Returns:** Array of directory entries with `name` and `isDirectory` properties.
+**Returns:** Array of `Dirent` entries with `name` and type-checking methods like `isDirectory()`.
 
 ```javascript
 const contents = await mac.system.listDirectory('/Users/me/Documents');
 contents.forEach(entry => {
-  console.log(`${entry.name} (${entry.isDirectory ? 'directory' : 'file'})`);
+  console.log(`${entry.name} (${entry.isDirectory() ? 'directory' : 'file'})`);
 });
 ```
 
@@ -336,15 +457,50 @@ console.log('Clipboard contains:', clipboardContent);
 
 ### Notes app
 
-Access through `mac.notes`.
+Access through `mac.notes`. The Notes app uses a folder-based API with iCloud as the default account.
+
+#### `NotesApp` methods
 
 | Method | Description |
 | --- | --- |
-| `create(title, content)` | Create a new note with the given title and content |
-| `list()` | List all notes |
-| `get(id)` | Get a note by ID |
-| `update(id, content)` | Update a note's content |
-| `delete(id)` | Delete a note |
+| `iCloud` | Default `NotesFolder` instance for the iCloud account |
+| `folder(name)` | Get a `NotesFolder` for a specific account name |
+| `find(title)` | Search all iCloud notes for a note by exact title. Returns `{title, content}` or `null` |
+| `searchNotes(query)` | Search note titles and bodies. Returns array of `{title, preview}` |
+
+#### `NotesFolder` methods
+
+| Method | Description |
+| --- | --- |
+| `open()` | Activate the Notes app |
+| `createNote({title, body})` | Create a new note. Body is Markdown, automatically converted to HTML |
+| `createRichNote({title, body?})` | Create a note with a rich template if no body is provided |
+| `appendToNote(title, content)` | Append Markdown content to an existing note by title |
+| `deleteNote(title)` | Delete a note by title |
+| `listNotes()` | List all notes. Returns array of `{title, modified, preview}` |
+| `find(title)` | Search for a note by title (delegates to `NotesApp.find()`) |
+| `listenForChange(title, callback, debounceTime?, pollInterval?)` | Poll a note for changes with debouncing. Returns a cleanup function |
+
+```javascript
+// Create a note with Markdown content
+await mac.notes.iCloud.createNote({
+  title: 'Meeting Notes',
+  body: '# Agenda\n- Item 1\n- [ ] Task to do'
+});
+
+// List all notes
+const notes = await mac.notes.iCloud.listNotes();
+console.log(notes);
+
+// Search for notes
+const results = await mac.notes.searchNotes('meeting');
+
+// Watch for changes
+const cleanup = await mac.notes.iCloud.listenForChange('My Note', (event) => {
+  console.log('Changed:', event.changes.added);
+});
+// Later: cleanup() to stop watching
+```
 
 ### VS Code app
 
@@ -352,37 +508,82 @@ Access through `mac.vscode`.
 
 | Method | Description |
 | --- | --- |
-| `openFile(filePath, options?)` | Open a file in VS Code (supports `line` and `column` options) |
-| `type(text)` | Type text at the current cursor position |
-| `save()` | Save the current file |
-| `runCommand(commandId)` | Run a VS Code command by ID |
+| `open(content?, filename?)` | Open VS Code. If content is provided, writes to a temp file and opens it |
+| `openFolder(folderPath)` | Open a folder in VS Code |
+| `newFile(content, filename?)` | Create and open a new file (alias for `open()`) |
+| `openWorkspace(workspacePath)` | Open a `.code-workspace` file in VS Code |
+| `createProject(name, template?)` | Create a project from a template and open it in VS Code |
 
-### Home Assistant app
+Available project templates for `createProject`: `'basic'`, `'node'`, `'web'`.
 
-Access through `mac.ha` or `mac.homeassistant`.
+```javascript
+// Open VS Code
+await mac.vscode.open();
+
+// Open a file with content
+const tmpPath = await mac.vscode.open('console.log("hello")', 'script.js');
+
+// Open a folder
+await mac.vscode.openFolder('~/projects/my-app');
+
+// Create a new project from template
+const projectPath = await mac.vscode.createProject('my-app', 'node');
+```
+
+## BaseApp
+
+All app instances (including those from `mac.app()`) inherit from `BaseApp`, which provides common application lifecycle methods.
 
 | Method | Description |
 | --- | --- |
-| `callService(domain, service, serviceData?)` | Call a Home Assistant service (e.g., `'light'`, `'turn_on'`) |
-| `getState(entityId)` | Get the state of a Home Assistant entity (e.g., `'light.kitchen'`) |
+| `activate()` | Bring the app to the foreground |
+| `quit()` | Quit the application |
+| `isRunning()` | Check if the app process is running. Returns `boolean` |
+| `hide()` | Hide the app window (requires Accessibility permissions) |
+| `show()` | Show/unhide the app (requires Accessibility permissions) |
+| `minimize()` | Minimize the front window |
+| `wait(ms?)` | Pause for `ms` milliseconds (default: 500) |
+| `getWindows()` | Get titles of all open windows (requires Accessibility permissions) |
+| `isFrontmost()` | Check if the app is the frontmost process. Returns `boolean` |
 
 ```javascript
-// Turn on the living room lights
-await mac.ha.callService('light', 'turn_on', {
-  entity_id: 'light.living_room'
-});
+const safari = mac.app('Safari');
+await safari.activate();
 
-// Check the state of a sensor
-const temp = await mac.ha.getState('sensor.living_room_temperature');
-console.log(`Temperature: ${temp.state}`);
+if (safari.isRunning()) {
+  const windows = safari.getWindows();
+  console.log('Open windows:', windows);
+}
+
+safari.quit();
+```
+
+## AppManager
+
+Access through `mac.apps`. Manages application instances.
+
+| Method | Description |
+| --- | --- |
+| `get(name)` | Get or create an app instance by name |
+| `register(name, appInstance)` | Register a custom app instance |
+| `getRunningApps()` | List currently running macOS apps. Returns array of `{pid, name, path}` |
+| `killApp(appName)` | Kill an app by name |
+
+```javascript
+// List running apps
+const running = await mac.apps.getRunningApps();
+console.log(running);
+
+// Kill an app
+await mac.apps.killApp('Safari');
 ```
 
 ## Automation
 
-Create and manage desktop automations using the `Automation` class:
+Create and manage desktop automations using the `Automation` class. This is a separate class from `Mac` that provides low-level mouse and keyboard control via [nut.js](https://github.com/nut-tree/nut.js).
 
 ```javascript
-import { Automation } from '@mac-sdk/automation';
+import { Automation, Key } from '@mac-sdk/automation';
 
 const automation = new Automation();
 
@@ -392,6 +593,17 @@ await automation.type('Hello, World!');
 await automation.pressKey(Key.Enter);
 await automation.pressKeyCombo(Key.LeftSuper, Key.Space);
 ```
+
+### Constructor
+
+```javascript
+const automation = new Automation(mouseSpeed?, keyboardDelay?);
+```
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `mouseSpeed` | `number` | `1000` | Mouse movement speed in pixels per second |
+| `keyboardDelay` | `number` | `10` | Delay between keystrokes in milliseconds |
 
 ### Automation methods
 
@@ -403,9 +615,9 @@ await automation.pressKeyCombo(Key.LeftSuper, Key.Space);
 | `scrollLeft(pixels)` | Scroll the mouse wheel left |
 | `scrollRight(pixels)` | Scroll the mouse wheel right |
 | `type(text)` | Type a given string |
-| `pressKey(...keys)` | Press a specific key or key combination |
-| `pressKeyCombo(...keys)` | Press a key combination (shortcut) |
-| `releaseKey(...keys)` | Release a specific key |
+| `pressKey(...keys)` | Press and release key(s). Handles combos if multiple keys are passed |
+| `pressKeyCombo(...keys)` | Press a key combination (e.g., Cmd+Space) |
+| `releaseKey(...keys)` | Release held key(s) |
 | `pause(ms)` | Pause execution for a specified duration (default: 500ms) |
 
 ## Extending the SDK
@@ -417,11 +629,12 @@ import { BaseApp } from '@mac-sdk/automation';
 
 export class MyApp extends BaseApp {
   constructor() {
-    super('myapp');
+    super('MyApp');
   }
 
   async customMethod() {
-    // Implementation
+    // Use this._executeAppleScript() for AppleScript commands
+    // Use this._shellCommand() for shell commands
   }
 }
 ```
@@ -431,6 +644,7 @@ Then register it with the `AppManager`:
 ```javascript
 const myApp = new MyApp();
 mac.apps.register('myapp', myApp);
-```
 
-You can access it via `mac.app('myapp')` or add it to the `_setupBuiltInApps` method in the Mac class for automatic initialization.
+// Access it later
+const app = mac.app('myapp');
+```

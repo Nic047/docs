@@ -55,32 +55,17 @@ Run the test:
 node test.js
 ```
 
-## Configuration
+## Permissions
 
-### Global configuration
+Some Mac SDK features require macOS permissions. Grant them in **System Preferences** > **Security & Privacy** > **Privacy**:
 
-Create a configuration file at `~/.mac-sdk/config.json`:
+| Permission | Required for |
+| --- | --- |
+| **Accessibility** | `hide()`, `show()`, `minimize()`, `getWindows()`, and UI scripting |
+| **Screen Recording** | `screenshot()` |
+| **Automation** | Controlling other applications via AppleScript |
 
-```json config.json
-{
-  "automation": {
-    "screenshotDir": "~/Pictures/mac-sdk",
-    "logLevel": "info"
-  },
-  "security": {
-    "requireAuth": true,
-    "allowedApps": ["Safari", "Notes", "Visual Studio Code"]
-  }
-}
-```
-
-### Environment variables
-
-```bash
-export MAC_SDK_LOG_LEVEL=debug
-export MAC_SDK_AUTO_UPDATE=true
-export MAC_SDK_TELEMETRY=anonymous
-```
+Add your terminal app (Terminal, iTerm, VS Code, etc.) to each of these categories as needed.
 
 ## Updating Mac SDK
 
@@ -141,6 +126,8 @@ If you are using TypeScript, ensure you have the latest type definitions:
 ```bash
 npm install --save-dev @types/node
 ```
+
+Mac SDK includes its own TypeScript definitions in `types/index.d.ts`.
 
 ## Next steps
 

@@ -51,7 +51,10 @@ async function main() {
 
     // Create a new note
     console.log('Creating a note...');
-    await mac.notes.create('My First Note', 'Hello from Mac SDK!');
+    await mac.notes.iCloud.createNote({
+      title: 'My First Note',
+      body: 'Hello from Mac SDK!'
+    });
 
     // Take a screenshot
     console.log('Taking a screenshot...');
@@ -90,7 +93,7 @@ node automate.js
     A new note titled "My First Note" appears in the Notes app.
   </Step>
   <Step title="Screenshot saved">
-    A screenshot of your screen is saved to your Desktop.
+    An interactive screenshot prompt appears and saves to your Desktop.
   </Step>
   <Step title="Notification appears">
     A system notification confirms the script ran successfully.
@@ -110,7 +113,7 @@ node automate.js
     Learn about file system operations and system controls.
   </Card>
   <Card title="Advanced automation" icon="robot" href="/guides/advanced-automation">
-    Build event-driven and parallel automation workflows.
+    Build automation workflows with mouse and keyboard control.
   </Card>
 </Columns>
 

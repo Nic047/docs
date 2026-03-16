@@ -1,132 +1,146 @@
 ---
 title: Integrations overview
-description: Extend Mac SDK with powerful integrations
+description: Extend Mac SDK with custom app integrations
 ---
 
-Mac SDK provides seamless integration with a wide range of services and tools to enhance your automation capabilities.
+Mac SDK is designed to be extensible. You can add support for any macOS application by extending the `BaseApp` class and registering it with the `AppManager`.
 
-## Available integrations
+## Built-in integrations
+
+Mac SDK ships with built-in support for:
 
 <Columns cols={2}>
-  <Card title="Home Assistant" icon="house">
-    Control smart home devices and automations.
+  <Card title="Apple Notes" icon="note-sticky" href="/api-reference/overview#notes-app">
+    Create, search, and manage notes with Markdown support.
   </Card>
-  <Card title="GitHub" icon="github">
-    Automate repository workflows and notifications.
-  </Card>
-  <Card title="Slack" icon="slack">
-    Send messages and manage channels programmatically.
-  </Card>
-  <Card title="Notion" icon="book">
-    Create and update Notion pages and databases.
+  <Card title="VS Code" icon="code" href="/api-reference/overview#vs-code-app">
+    Open files, folders, workspaces, and scaffold projects.
   </Card>
 </Columns>
 
-## Authentication
+Any other application can be controlled through the generic `mac.app()` interface, which provides lifecycle methods like `activate()`, `quit()`, `isRunning()`, and more.
 
-Most integrations require authentication. Mac SDK provides a secure way to manage credentials:
-
-```typescript
-import { Mac } from '@mac-sdk/automation';
-
-async function setupIntegration() {
-  const mac = new Mac();
-
-  // Securely store credentials
-  await mac.secrets.set('github', {
-    token: 'your-github-token',
-    username: 'your-username'
-  });
-
-  // Retrieve credentials when needed
-  const githubCreds = await mac.secrets.get('github');
-}
+```javascript
+const safari = mac.app('Safari');
+await safari.activate();
+console.log('Is running:', safari.isRunning());
 ```
 
 ## Creating custom integrations
 
-Extend Mac SDK with your own integrations:
+Extend Mac SDK with your own application integrations by subclassing `BaseApp`:
 
 ```typescript
-import { BaseIntegration } from '@mac-sdk/automation';
+import { BaseApp } from '@mac-sdk/automation';
 
-export class MyCustomIntegration extends BaseIntegration {
-  constructor(private apiKey: string) {
-    super('my-custom-service');
+export class SlackApp extends BaseApp {
+  constructor() {
+    super('Slack');
   }
 
-  async fetchData() {
-    const response = await fetch('https://api.example.com/data', {
-      headers: { 'Authorization': `Bearer ${this.apiKey}` }
-    });
-    return response.json();
+  async sendMessage(channel: string, message: string) {
+    // Use AppleScript to interact with Slack
+    await this.activate();
+    // Add your custom automation logic here
   }
 }
 
 // Register the integration
-mac.integrations.register('myService', new MyCustomIntegration('api-key-here'));
+const mac = new Mac();
+mac.apps.register('slack', new SlackApp());
+
+// Use it
+const slack = mac.app('slack');
+await slack.sendMessage('#general', 'Hello from Mac SDK!');
 ```
 
-## Webhook support
+### Available base methods
 
-Receive and process webhooks from external services:
+When you extend `BaseApp`, your custom app inherits these methods:
 
-```typescript
-import { Mac } from '@mac-sdk/automation';
+| Method | Description |
+| --- | --- |
+| `activate()` | Bring the app to the foreground |
+| `quit()` | Quit the application |
+| `isRunning()` | Check if the app process is running |
+| `hide()` | Hide the app window |
+| `show()` | Show/unhide the app |
+| `minimize()` | Minimize the front window |
+| `wait(ms?)` | Pause for a duration (default: 500ms) |
+| `getWindows()` | Get titles of all open windows |
+| `isFrontmost()` | Check if the app is the frontmost process |
 
-const mac = new Mac();
+### Internal helpers
 
-// Create a webhook endpoint
-const webhook = mac.webhooks.create({
-  path: '/github-webhook',
-  secret: 'your-webhook-secret'
-});
+Inside your custom app class, you can use these protected methods:
 
-// Handle webhook events
-webhook.on('push', async (payload) => {
-  console.log('Received push event:', payload);
-  await mac.notification('GitHub Push', 'New code was pushed to the repository');
-});
-
-// Start the webhook server
-webhook.start(3000);
-```
-
-## Rate limiting and throttling
-
-Handle API rate limits gracefully:
+| Method | Description |
+| --- | --- |
+| `_executeAppleScript(script)` | Execute an AppleScript string (15s timeout) |
+| `_shellCommand(cmd)` | Execute a shell command (10s timeout) |
+| `_escapeAppleScript(script)` | Escape single quotes for AppleScript |
+| `_escapeString(str)` | Escape quotes and newlines for embedding in scripts |
 
 ```typescript
-import { Mac } from '@mac-sdk/automation';
-
-const mac = new Mac();
-
-// Configure rate limiting
-mac.integrations.configure('github', {
-  rateLimit: {
-    requestsPerMinute: 30,
-    retryAfter: 60
+export class SpotifyApp extends BaseApp {
+  constructor() {
+    super('Spotify');
   }
-});
 
-// All GitHub API calls will now be rate-limited
-const repos = await mac.integrations.github.getRepos();
+  async getCurrentTrack() {
+    const script = `
+      tell application "Spotify"
+        return name of current track & " - " & artist of current track
+      end tell
+    `;
+    return this._executeAppleScript(script);
+  }
+
+  async playPause() {
+    const script = `tell application "Spotify" to playpause`;
+    return this._executeAppleScript(script);
+  }
+}
+```
+
+## Managing app instances
+
+Use the `AppManager` (accessible via `mac.apps`) to register and manage your integrations:
+
+```javascript
+import { Mac } from '@mac-sdk/automation';
+
+const mac = new Mac();
+
+// Register custom apps
+mac.apps.register('spotify', new SpotifyApp());
+mac.apps.register('slack', new SlackApp());
+
+// Access them
+const spotify = mac.app('spotify');
+const track = await spotify.getCurrentTrack();
+
+// List running apps
+const running = await mac.apps.getRunningApps();
+console.log('Running apps:', running);
+
+// Kill an app
+await mac.apps.killApp('Safari');
 ```
 
 ## Error handling
 
-Consistent error handling across all integrations:
+All `BaseApp` methods throw standard `Error` objects when AppleScript or shell commands fail. Wrap calls in try/catch blocks:
 
 ```typescript
 try {
-  const result = await mac.integrations.someService.doSomething();
+  const spotify = mac.app('Spotify');
+  await spotify.activate();
 } catch (error) {
-  if (error.isRateLimitError) {
-    console.log(`Rate limited. Try again in ${error.retryAfter} seconds`);
-  } else if (error.isAuthError) {
-    console.log('Authentication failed. Please check your credentials.');
-  } else {
-    console.error('An error occurred:', error);
-  }
+  console.error('Failed to activate Spotify:', error.message);
 }
 ```
+
+<Note>
+  Some methods like `hide()`, `show()`, and `getWindows()` require **Accessibility permissions**. Grant access in **System Preferences** > **Security & Privacy** > **Privacy** > **Accessibility**.
+</Note>
