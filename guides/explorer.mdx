@@ -10,7 +10,7 @@ The Explorer provides comprehensive file system operations and system controls f
 The Explorer is accessible through `mac.system` and provides two main categories of functionality:
 
 - **File system operations** - Create, read, write, copy, move, and delete files and directories
-- **System controls** - Clipboard, screenshots, notifications, text-to-speech, and application management
+- **System controls** - Clipboard, screenshots, notifications, text-to-speech, volume, brightness, Wi-Fi, and more
 
 ## File system operations
 
@@ -32,7 +32,6 @@ This is a sample project created with Mac SDK.
 ## Features
 - File management
 - System automation
-- Cross-platform compatibility
 `);
 
 console.log('Files created:', filePath, readmePath);
@@ -155,7 +154,7 @@ const projectFiles = await mac.system.listDirectory('my-project');
 
 // Process directory contents
 for (const entry of projectFiles) {
-  if (entry.isDirectory) {
+  if (entry.isDirectory()) {
     console.log(`${entry.name}/`);
   } else {
     console.log(entry.name);
@@ -228,7 +227,7 @@ await mac.system.copyToClipboard(fileContent);
 ### Screenshots
 
 ```javascript
-// Take screenshot with default path
+// Take screenshot with default path (timestamped file in current directory)
 const screenshotPath = await mac.system.screenshot();
 console.log('Screenshot saved to:', screenshotPath);
 
@@ -236,6 +235,10 @@ console.log('Screenshot saved to:', screenshotPath);
 const customPath = await mac.system.screenshot('/Users/me/Desktop/my-screenshot.png');
 console.log('Custom screenshot saved to:', customPath);
 ```
+
+<Note>
+  The `screenshot()` method uses `screencapture -i`, which opens an interactive selection tool. You can capture the full screen, a window, or a selected area.
+</Note>
 
 ### Notifications
 
@@ -268,6 +271,66 @@ await mac.system.speak('Welcome to the future of automation', 'Samantha');
 await mac.system.openApp('Calculator');
 await mac.system.openApp('Google Chrome');
 await mac.system.openApp('Visual Studio Code');
+```
+
+### Volume and brightness
+
+```javascript
+// Set system volume (0-100)
+await mac.system.setVolume(50);
+
+// Set screen brightness (0-1, requires `brightness` CLI tool)
+await mac.system.setBrightness(0.7);
+```
+
+### Sleep and lock
+
+```javascript
+// Put the Mac to sleep
+await mac.system.sleep();
+
+// Lock the screen
+await mac.system.lock();
+```
+
+### Wi-Fi and Bluetooth
+
+```javascript
+// Toggle Wi-Fi off and back on
+await mac.system.toggleWiFi();
+
+// List preferred wireless networks
+const networks = await mac.system.getWiFiNetworks();
+console.log('Preferred networks:', networks);
+
+// Connect to a Wi-Fi network
+await mac.system.connectWiFi('MyNetwork', 'my-password');
+
+// Toggle Bluetooth (requires `blueutil`)
+await mac.system.toggleBluetooth();
+```
+
+### System information
+
+```javascript
+// Get disk space
+const disk = await mac.system.getDiskSpace();
+console.log(`Disk: ${disk.used} used of ${disk.total} (${disk.percentage})`);
+
+// Get memory usage
+const memory = await mac.system.getMemoryUsage();
+console.log(memory);
+
+// Get CPU usage
+const cpu = await mac.system.getCPUUsage();
+console.log(cpu);
+```
+
+### Desktop wallpaper
+
+```javascript
+// Set desktop wallpaper
+await mac.system.setDesktopWallpaper('/Users/me/Pictures/wallpaper.jpg');
 ```
 
 ## Practical examples
@@ -454,6 +517,10 @@ if (await mac.system.exists(projectRoot)) {
   console.log('Project files:', files.map(f => f.name));
 }
 ```
+
+<Note>
+  Relative paths are resolved against `process.cwd()`. Use absolute paths when you need predictable behavior regardless of where the script is run from.
+</Note>
 
 ### Performance considerations
 

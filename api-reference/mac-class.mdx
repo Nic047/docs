@@ -3,7 +3,7 @@ title: Mac class
 description: The main entry point for Mac SDK
 ---
 
-The `Mac` class is the primary interface for interacting with Mac SDK. It provides access to system controls, built-in apps, and automation features.
+The `Mac` class is the primary interface for interacting with Mac SDK. It provides access to system controls, built-in apps, and convenience shortcuts.
 
 ## Import
 
@@ -14,17 +14,10 @@ import { Mac } from '@mac-sdk/automation';
 ## Constructor
 
 ```typescript
-const mac = new Mac(options?: MacOptions);
+const mac = new Mac();
 ```
 
-### Parameters
-
-| Option | Type | Description |
-| --- | --- | --- |
-| `automation.screenshotDir` | `string` | Directory to save screenshots (default: `~/Pictures/mac-sdk`) |
-| `automation.logLevel` | `string` | Logging level (`'error'`, `'warn'`, `'info'`, `'debug'`) |
-| `security.requireAuth` | `boolean` | Require authentication for sensitive operations |
-| `security.allowedApps` | `string[]` | Whitelist of allowed applications |
+The `Mac` constructor takes no arguments. It initializes the system controls, app manager, and built-in app integrations automatically.
 
 ## Properties
 
@@ -32,22 +25,23 @@ const mac = new Mac(options?: MacOptions);
 | --- | --- | --- |
 | `system` | `SystemControls` | Access system-level controls like clipboard, notifications, and file operations |
 | `apps` | `AppManager` | Manage and access application instances |
-| `notes` | `NotesApp` | Built-in Notes app integration |
+| `notes` | `NotesApp` | Built-in Apple Notes integration |
 | `vscode` | `VSCodeApp` | Built-in VS Code integration |
 
 ## Methods
 
 ### `app(name: string): BaseApp`
 
-Get an application instance by name.
+Get an application instance by name. Returns a `GenericApp` (extends `BaseApp`) for any application. Instances are lazily created and cached.
 
 ```typescript
-const notes = mac.app('notes');
+const safari = mac.app('Safari');
+await safari.activate();
 ```
 
 ### `copyToClipboard(text: string): Promise<void>`
 
-Copy text to the system clipboard.
+Copy text to the system clipboard. Shortcut for `mac.system.copyToClipboard()`.
 
 ```typescript
 await mac.copyToClipboard('Hello, world!');
@@ -55,7 +49,7 @@ await mac.copyToClipboard('Hello, world!');
 
 ### `getClipboard(): Promise<string>`
 
-Get the current content of the system clipboard.
+Get the current content of the system clipboard. Shortcut for `mac.system.getClipboard()`.
 
 ```typescript
 const content = await mac.getClipboard();
@@ -64,17 +58,17 @@ console.log('Clipboard:', content);
 
 ### `screenshot(path?: string): Promise<string>`
 
-Take a screenshot of the screen.
+Take an interactive screenshot. If no path is provided, the screenshot is saved to the current working directory with a timestamped filename.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `path` | `string` | No | Save path for the screenshot |
 
-**Returns:** Path to the saved screenshot.
+**Returns:** Path to the saved screenshot file.
 
 ```typescript
-// Full screen
-const fullPath = await mac.screenshot();
+// Interactive screenshot with default path
+const screenshotPath = await mac.screenshot();
 
 // Custom path
 const customPath = await mac.screenshot('~/Desktop/screenshot.png');
@@ -82,7 +76,7 @@ const customPath = await mac.screenshot('~/Desktop/screenshot.png');
 
 ### `notification(title: string, message: string, sound?: string): Promise<void>`
 
-Display a system notification.
+Display a macOS system notification.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -100,7 +94,7 @@ await mac.notification(
 
 ### `speak(text: string, voice?: string): Promise<void>`
 
-Convert text to speech.
+Convert text to speech using the macOS `say` command.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -113,7 +107,7 @@ await mac.speak('Hello, I am your Mac assistant', 'Samantha');
 
 ### `openApp(name: string): Promise<void>`
 
-Open an application.
+Open an application by name using the macOS `open -a` command.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -123,56 +117,15 @@ Open an application.
 await mac.openApp('Safari');
 ```
 
-## Events
-
-The `Mac` class extends `EventEmitter` and emits the following events:
-
-### `ready`
-
-Emitted when the Mac instance is fully initialized.
-
-```typescript
-mac.on('ready', () => {
-  console.log('Mac SDK is ready!');
-});
-```
-
-### `error`
-
-Emitted when an error occurs.
-
-```typescript
-mac.on('error', (error) => {
-  console.error('An error occurred:', error);
-});
-```
-
-### `appDidLaunch`
-
-Emitted when an application is launched.
-
-```typescript
-mac.on('appDidLaunch', (appInfo) => {
-  console.log(`${appInfo.name} (${appInfo.pid}) was launched`);
-});
-```
-
 ## Error handling
 
-All methods return Promises that reject with an `Error` object containing:
-
-- `message`: Error description
-- `code`: Error code (e.g., `'ENOENT'`, `'EPERM'`)
-- `details`: Additional error details
+Methods that execute AppleScript or shell commands throw standard `Error` objects when they fail. Wrap calls in try/catch for robust error handling.
 
 ```typescript
 try {
   await mac.openApp('NonExistentApp');
 } catch (error) {
-  console.error(`Error (${error.code}): ${error.message}`);
-  if (error.details) {
-    console.error('Details:', error.details);
-  }
+  console.error('Failed:', error.message);
 }
 ```
 
@@ -189,7 +142,10 @@ async function main() {
   console.log(`Screenshot saved to: ${screenshotPath}`);
 
   // Create a note
-  await mac.notes.create('Automation Log', 'Script executed successfully.');
+  await mac.notes.iCloud.createNote({
+    title: 'Automation Log',
+    body: 'Script executed successfully.'
+  });
 
   // Show notification
   await mac.notification('Done', 'Automation complete!');
@@ -202,4 +158,4 @@ main().catch(console.error);
 
 - [API reference](/api-reference/overview) - Complete method documentation
 - [Explorer guide](/guides/explorer) - File system operations and system controls
-- [Advanced automation](/guides/advanced-automation) - Event-driven workflows
+- [Advanced automation](/guides/advanced-automation) - Automation patterns and best practices

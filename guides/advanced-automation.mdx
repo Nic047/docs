@@ -3,37 +3,32 @@ title: Advanced automation
 description: Advanced automation techniques and patterns
 ---
 
-## Event-driven automation
+## Desktop automation with Automation class
 
-Create responsive automations that react to system events:
+The `Automation` class provides low-level mouse and keyboard control, separate from the `Mac` class. Use it for pixel-based UI automation.
 
 ```typescript
-import { Mac, Automation } from '@mac-sdk/automation';
+import { Mac, Automation, Key } from '@mac-sdk/automation';
 
 const mac = new Mac();
-const automation = new Automation();
+const automation = new Automation(500, 50);
 
-// React to application launches
-automation.on('appDidLaunch', { app: 'Safari' }, async () => {
-  await mac.notification('Safari Launched', 'Customizing your browsing experience...');
-});
+// Open an app and automate it
+await mac.openApp('Safari');
+await automation.pause(1000);
 
-// Monitor file system changes
-automation.on('fileChanged', {
-  path: '~/Downloads',
-  recursive: true,
-  eventTypes: ['add', 'modify']
-}, async (event) => {
-  console.log(`File ${event.path} was ${event.type}d`);
-});
+// Navigate to URL bar
+await automation.pressKeyCombo(Key.LeftSuper, Key.L);
+await automation.pause(200);
 
-// Start the automation engine
-automation.start();
+// Type a URL and press Enter
+await automation.type('https://github.com');
+await automation.pressKey(Key.Enter);
 ```
 
 ## Parallel task execution
 
-Run multiple automation tasks in parallel:
+Run multiple independent automation tasks in parallel using `Promise.all`:
 
 ```typescript
 import { Mac } from '@mac-sdk/automation';
@@ -42,9 +37,12 @@ async function runParallelTasks() {
   const mac = new Mac();
 
   const tasks = [
-    mac.notes.create('Task 1', 'First parallel task'),
-    mac.vscode.openFile('~/project1/index.js'),
-    mac.system.screenshot('~/screenshots/parallel-1.png'),
+    mac.notes.iCloud.createNote({
+      title: 'Task 1',
+      body: 'First parallel task'
+    }),
+    mac.system.screenshot('~/Desktop/parallel-1.png'),
+    mac.system.createFile('parallel-output.txt', 'Created in parallel'),
   ];
 
   await Promise.all(tasks);
@@ -89,9 +87,35 @@ class AutomationManager {
 }
 ```
 
+## Combining Mac and Automation
+
+Use the `Mac` class for high-level operations and the `Automation` class for fine-grained UI control:
+
+```typescript
+import { Mac, Automation, Key } from '@mac-sdk/automation';
+
+async function automatedWorkflow() {
+  const mac = new Mac();
+  const automation = new Automation();
+
+  // High-level: open an app
+  await mac.openApp('Visual Studio Code');
+  await automation.pause(2000);
+
+  // Low-level: interact with the UI
+  await automation.pressKeyCombo(Key.LeftSuper, Key.N); // New file
+  await automation.pause(500);
+  await automation.type('console.log("Hello from Mac SDK!");');
+
+  // High-level: take a screenshot and notify
+  await mac.screenshot('~/Desktop/vscode-demo.png');
+  await mac.notification('Done', 'Workflow complete!');
+}
+```
+
 ## State management
 
-Manage state across automation runs:
+Manage state across automation runs by persisting to a file:
 
 ```typescript
 import { Mac } from '@mac-sdk/automation';
@@ -99,10 +123,12 @@ import fs from 'fs/promises';
 import path from 'path';
 
 class StateManager {
-  private statePath = path.join(process.env.HOME || '~', '.mac-sdk/state.json');
+  private statePath: string;
   private state: Record<string, any> = {};
 
-  constructor(private mac: Mac) {}
+  constructor(statePath?: string) {
+    this.statePath = statePath || path.join(process.env.HOME || '~', '.mac-sdk/state.json');
+  }
 
   async load() {
     try {
@@ -131,7 +157,7 @@ class StateManager {
 // Usage
 async function main() {
   const mac = new Mac();
-  const state = await new StateManager(mac).load();
+  const state = await new StateManager().load();
 
   const lastRun = state.get('lastRun', 0);
   state.set('lastRun', Date.now());
@@ -176,4 +202,30 @@ class OptimizedAutomation {
 }
 ```
 
-These advanced patterns help you build robust, maintainable, and efficient automations with Mac SDK.
+## Monitoring note changes
+
+Use the `listenForChange` method to react to changes in Apple Notes:
+
+```typescript
+import { Mac } from '@mac-sdk/automation';
+
+const mac = new Mac();
+
+// Watch a note for changes (polls every 2 seconds, debounces for 5 seconds)
+const cleanup = await mac.notes.iCloud.listenForChange(
+  'My Note',
+  (event) => {
+    console.log('Note changed!');
+    console.log('Added:', event.changes.added);
+    console.log('Removed:', event.changes.removed);
+    console.log('Note ID:', event.noteId);
+  },
+  5000,  // debounce time (ms)
+  2000   // poll interval (ms)
+);
+
+// Stop watching when done
+// cleanup();
+```
+
+These patterns help you build robust, maintainable, and efficient automations with Mac SDK.

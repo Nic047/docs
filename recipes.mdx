@@ -29,7 +29,7 @@ async function organizeDownloads() {
   const files = await mac.system.listDirectory(DOWNLOADS);
 
   for (const file of files) {
-    if (file.isDirectory) continue;
+    if (file.isDirectory()) continue;
 
     const ext = path.extname(file.name).toLowerCase().slice(1);
     let targetFolder = 'other';
@@ -70,27 +70,23 @@ const mac = new Mac();
 const WORKSPACES = {
   work: {
     apps: ['Visual Studio Code', 'iTerm2', 'Slack'],
-    brightness: 80,
     volume: 30,
-    wifi: 'Work-WiFi',
   },
   relax: {
     apps: ['Spotify', 'Safari'],
-    brightness: 40,
     volume: 60,
-    wifi: 'Home-WiFi',
   },
 };
 
-async function switchWorkspace(workspaceName) {
+async function switchWorkspace(workspaceName: string) {
   const workspace = WORKSPACES[workspaceName];
   if (!workspace) throw new Error(`Unknown workspace: ${workspaceName}`);
 
   // Close non-essential running apps
-  const runningApps = await mac.system.getRunningApps();
+  const runningApps = await mac.apps.getRunningApps();
   for (const app of runningApps) {
     if (!workspace.apps.includes(app.name) && app.name !== 'Finder') {
-      await mac.system.quitApp(app.name);
+      await mac.apps.killApp(app.name);
     }
   }
 
@@ -99,14 +95,8 @@ async function switchWorkspace(workspaceName) {
     await mac.openApp(app);
   }
 
-  // Adjust system settings
-  await mac.system.setBrightness(workspace.brightness);
+  // Adjust system volume
   await mac.system.setVolume(workspace.volume);
-
-  // Connect to preferred WiFi
-  if (workspace.wifi) {
-    await mac.system.connectToWifi(workspace.wifi);
-  }
 
   await mac.notification('Workspace Activated', `Switched to ${workspaceName} mode`);
 }
@@ -145,40 +135,28 @@ class MeetingNoteTaker {
 `;
 
     this.meetingNotes.set(title, noteContent);
-    await mac.notes.create(`Meeting: ${title}`, noteContent);
+    await mac.notes.iCloud.createNote({
+      title: `Meeting: ${title}`,
+      body: noteContent
+    });
 
-    // Start recording (if permission granted)
-    try {
-      await mac.audio.startRecording({
-        output: `~/Documents/Meetings/${title.replace(/[^\w]/g, '_')}_${new Date().toISOString()}.m4a`,
-      });
-    } catch (error) {
-      console.warn('Could not start recording:', error.message);
-    }
-
+    await mac.notification('Meeting Started', `Recording notes for: ${title}`);
     return noteContent;
   }
 
   async addNote(note: string) {
     if (!this.currentMeeting) throw new Error('No active meeting');
 
-    const currentContent = this.meetingNotes.get(this.currentMeeting) || '';
-    const updatedContent = currentContent + '\n' + note;
-
-    this.meetingNotes.set(this.currentMeeting, updatedContent);
-    await mac.notes.update(`Meeting: ${this.currentMeeting}`, updatedContent);
+    await mac.notes.iCloud.appendToNote(
+      `Meeting: ${this.currentMeeting}`,
+      `\n${note}`
+    );
   }
 
   async endMeeting() {
     if (!this.currentMeeting) return;
 
-    // Stop recording
-    try {
-      await mac.audio.stopRecording();
-    } catch (error) {
-      console.warn('Error stopping recording:', error.message);
-    }
-
+    await mac.notification('Meeting Ended', `Notes saved for: ${this.currentMeeting}`);
     this.currentMeeting = null;
   }
 }
@@ -186,170 +164,194 @@ class MeetingNoteTaker {
 
 ## Development
 
-### Auto-format and test on save
+### VS Code project scaffolding
 
 ```typescript
 import { Mac } from '@mac-sdk/automation';
 
 const mac = new Mac();
 
-class DevelopmentWorkflow {
-  private projectRoot: string;
+async function setupDevEnvironment(projectName: string) {
+  // Create project structure
+  await mac.system.createDirectory(`${projectName}/src`);
+  await mac.system.createDirectory(`${projectName}/tests`);
+  await mac.system.createDirectory(`${projectName}/docs`);
 
-  constructor(projectPath: string) {
-    this.projectRoot = projectPath;
-  }
-
-  async setupWatchers() {
-    await mac.system.on('fileChanged', {
-      path: this.projectRoot,
-      recursive: true,
-      filter: ['**/*.js', '**/*.ts', '**/*.jsx', '**/*.tsx'],
-      onChange: async (filePath) => {
-        console.log(`File changed: ${filePath}`);
-        await this.formatFile(filePath);
-        await this.runTests(filePath);
-      },
-    });
-
-    console.log(`Watching for changes in ${this.projectRoot}`);
-  }
-
-  private async formatFile(filePath: string) {
-    try {
-      console.log(`Formatted: ${filePath}`);
-    } catch (error) {
-      console.error(`Error formatting ${filePath}:`, error.message);
+  // Create package.json
+  const packageJson = {
+    name: projectName,
+    version: '1.0.0',
+    description: `A project created with Mac SDK`,
+    main: 'src/index.js',
+    scripts: {
+      test: 'jest',
+      start: 'node src/index.js'
     }
-  }
+  };
 
-  private async runTests(filePath: string) {
-    try {
-      await mac.notification('Tests Passed', `All tests passed for ${filePath}`);
-    } catch (error) {
-      await mac.notification('Tests Failed', `Tests failed for ${filePath}`, 'Sosumi');
-    }
-  }
+  await mac.system.writeFile(
+    `${projectName}/package.json`,
+    JSON.stringify(packageJson, null, 2)
+  );
+
+  // Create main file
+  await mac.system.writeFile(
+    `${projectName}/src/index.js`,
+    `console.log('Hello, ${projectName}!');`
+  );
+
+  // Create README
+  await mac.system.writeFile(`${projectName}/README.md`, `# ${projectName}
+
+A project created with Mac SDK automation.
+
+## Getting started
+
+\`\`\`bash
+npm install
+npm start
+\`\`\`
+`);
+
+  // Open in VS Code
+  await mac.vscode.openFolder(projectName);
+
+  await mac.notification('Project Created', `${projectName} is ready in VS Code!`);
 }
+
+setupDevEnvironment('my-app').catch(console.error);
 ```
 
-## Home automation
+### Automated browser testing
 
-### Smart morning routine
+```typescript
+import { Mac, Automation, Key } from '@mac-sdk/automation';
+
+const mac = new Mac();
+const automation = new Automation(500, 50);
+
+async function runBrowserTest(url: string) {
+  await mac.openApp('Safari');
+  await automation.pause(1000);
+
+  // Navigate to URL
+  await automation.pressKeyCombo(Key.LeftSuper, Key.L);
+  await automation.pause(200);
+  await automation.type(url);
+  await automation.pressKey(Key.Enter);
+  await automation.pause(3000);
+
+  // Take a screenshot
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const screenshotPath = `~/Desktop/test-${timestamp}.png`;
+  await mac.screenshot(screenshotPath);
+
+  await mac.notification('Test Complete', `Screenshot saved for ${url}`);
+  return screenshotPath;
+}
+
+runBrowserTest('https://example.com').catch(console.error);
+```
+
+## System management
+
+### System info reporter
 
 ```typescript
 import { Mac } from '@mac-sdk/automation';
 
 const mac = new Mac();
 
-class MorningRoutine {
-  async executeRoutine() {
-    // Wake up the computer (if sleeping)
-    await mac.system.wake();
+async function generateSystemReport() {
+  const disk = await mac.system.getDiskSpace();
+  const cpu = await mac.system.getCPUUsage();
+  const memory = await mac.system.getMemoryUsage();
+  const wifi = await mac.system.getWiFiNetworks();
+  const runningApps = await mac.apps.getRunningApps();
 
-    // Adjust system settings
-    await mac.system.setBrightness(70);
-    await mac.system.setVolume(30);
+  const report = `# System Report
 
-    // Build a morning summary
-    let summary = 'Good morning! ';
+**Generated**: ${new Date().toLocaleString()}
 
-    // Get weather (placeholder - use a weather API in production)
-    try {
-      const weather = { temperature: 72, condition: 'Partly Cloudy', high: 78, low: 65 };
-      summary += `It's currently ${weather.temperature} degrees and ${weather.condition}. `;
-      summary += `High of ${weather.high}, low of ${weather.low}. `;
-    } catch (error) {
-      console.warn('Could not fetch weather:', error.message);
-    }
+## Disk space
+- Total: ${disk.total}
+- Used: ${disk.used} (${disk.percentage})
+- Available: ${disk.available}
 
-    summary += 'Have a great day!';
+## Running apps (${runningApps.length})
+${runningApps.map(app => `- ${app.name} (PID: ${app.pid})`).join('\n')}
 
-    // Read the summary out loud
-    await mac.speak(summary);
+## Wi-Fi networks
+${wifi.map(n => `- ${n}`).join('\n')}
+`;
 
-    // Open morning apps
-    await mac.openApp('Safari');
-    await mac.openApp('Mail');
-    await mac.openApp('Slack');
+  // Save to a note
+  await mac.notes.iCloud.createNote({
+    title: `System Report - ${new Date().toLocaleDateString()}`,
+    body: report
+  });
 
-    // Turn on smart lights via Home Assistant
-    try {
-      await mac.ha.callService('scene', 'turn_on', {
-        entity_id: 'scene.morning',
-      });
-    } catch (error) {
-      console.warn('Could not control smart lights:', error.message);
-    }
-
-    // Start coffee machine (if compatible)
-    try {
-      await mac.ha.callService('switch', 'turn_on', {
-        entity_id: 'switch.coffee_maker',
-      });
-    } catch (error) {
-      console.warn('Could not start coffee maker:', error.message);
-    }
-  }
+  await mac.notification('Report Generated', 'System report saved to Notes');
 }
+
+generateSystemReport().catch(console.error);
 ```
 
-## Advanced: AI-powered assistant
+### Workspace cleanup
 
 ```typescript
 import { Mac } from '@mac-sdk/automation';
 
-class AIVirtualAssistant {
-  private mac: Mac;
-  private context: string[] = [];
+const mac = new Mac();
 
-  constructor() {
-    this.mac = new Mac();
-    this.context.push(
-      'You are a helpful AI assistant integrated with the user\'s Mac. ' +
-      'You can control apps, files, and system settings. ' +
-      'Be concise and helpful.'
-    );
-  }
+async function cleanupDirectory(dirPath: string, options: {
+  olderThanDays?: number;
+  filePatterns?: string[];
+  dryRun?: boolean;
+} = {}) {
+  const {
+    olderThanDays = 30,
+    filePatterns = ['*.tmp', '*.log', '*.cache'],
+    dryRun = false
+  } = options;
 
-  async processCommand(command: string) {
-    try {
-      this.context.push(`User: ${command}`);
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
 
-      // Get AI response (integrate your preferred AI service)
-      const aiResponse = await this.getAIResponse(command);
-      this.context.push(`Assistant: ${aiResponse}`);
+  let deletedCount = 0;
+  let totalSize = 0;
 
-      // Execute any extracted commands
-      await this.executeCommands(aiResponse);
+  for (const pattern of filePatterns) {
+    const files = await mac.system.findFiles(pattern, dirPath);
 
-      return aiResponse;
-    } catch (error) {
-      console.error('Error processing command:', error);
-      return 'Sorry, I encountered an error processing your request.';
-    }
-  }
+    for (const file of files) {
+      const fullPath = `${dirPath}/${file}`;
+      const stats = await mac.system.getInfo(fullPath);
 
-  private async getAIResponse(command: string): Promise<string> {
-    // Replace with your AI service integration
-    return `I'll help you with: ${command}`;
-  }
+      if (stats.mtime < cutoffDate) {
+        if (dryRun) {
+          console.log(`Would delete: ${fullPath} (${stats.size} bytes)`);
+        } else {
+          await mac.system.remove(fullPath);
+          console.log(`Deleted: ${fullPath}`);
+        }
 
-  private async executeCommands(response: string) {
-    const commandMatch = response.match(/\[EXECUTE:(.*?)\]/);
-    if (commandMatch) {
-      const command = commandMatch[1].trim();
-
-      if (command.startsWith('open ')) {
-        const appName = command.substring(5);
-        await this.mac.openApp(appName);
-      } else if (command.startsWith('note ')) {
-        const noteContent = command.substring(5);
-        await this.mac.notes.create('AI Note', noteContent);
+        deletedCount++;
+        totalSize += stats.size;
       }
     }
   }
+
+  const message = dryRun
+    ? `Would delete ${deletedCount} files (${(totalSize / 1024 / 1024).toFixed(2)} MB)`
+    : `Deleted ${deletedCount} files (${(totalSize / 1024 / 1024).toFixed(2)} MB)`;
+
+  await mac.notification('Cleanup Complete', message);
+  return { deletedCount, totalSize };
 }
+
+// Dry run first
+cleanupDirectory('/Users/me/temp', { dryRun: true }).catch(console.error);
 ```
 
 ## Contributing

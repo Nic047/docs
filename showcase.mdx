@@ -1,38 +1,81 @@
 ---
 title: Showcase
-description: Interactive examples and demos of Mac SDK in action
+description: Real-world use cases and demos of Mac SDK in action
 ---
 
-Explore examples demonstrating the power of Mac SDK.
+Explore what you can build with Mac SDK.
 
-## Performance metrics
+## What you can automate
 
-| Feature | Before | After | Improvement |
-| --- | --- | --- | --- |
-| App launch | 2.1s | 0.8s | 62% faster |
-| File search | 4.5s | 1.2s | 73% faster |
-| API response | 320ms | 45ms | 86% faster |
-| Memory usage | 145MB | 82MB | 43% less |
+Mac SDK gives you programmatic control over macOS through a clean JavaScript API. Here are the main categories of automation you can build.
+
+### System control
+
+- Adjust volume, brightness, and wallpaper
+- Take screenshots and trigger notifications
+- Monitor CPU, memory, and disk usage
+- Manage Wi-Fi and Bluetooth connections
+- Lock, sleep, or wake your Mac
+
+### File management
+
+- Create, read, write, copy, and move files
+- Search files with glob patterns
+- Automate backup routines
+- Organize downloads by file type
+
+### Application automation
+
+- Launch, quit, hide, and show any macOS app
+- Check if apps are running or frontmost
+- Get window titles and manage app lifecycle
+- Build custom integrations by extending `BaseApp`
+
+### Desktop automation
+
+- Click, scroll, and type at pixel-level precision
+- Press key combinations and shortcuts
+- Automate multi-step UI workflows
+- Combine with app control for end-to-end automation
+
+### Apple Notes
+
+- Create notes with Markdown content (auto-converted to HTML)
+- Search, list, and delete notes
+- Append content to existing notes
+- Watch notes for real-time changes with diff detection
+
+### VS Code
+
+- Open files, folders, and workspaces
+- Scaffold new projects from built-in templates
+- Combine with `Automation` class for full IDE automation
 
 ## Real-world use cases
 
 ### Automated development environment
 
-- Auto-configure IDE settings
-- Start necessary services
-- Open relevant documentation
-
-### Smart home control center
-
-- Control lights, thermostats, and more
-- Create custom voice commands
-- Set up location-based automations
+- Scaffold project directories with `mac.system` and open in VS Code
+- Run tests and capture screenshots of results
+- Notify when builds complete or fail
 
 ### Personal knowledge base
 
-- Auto-organize notes and bookmarks
-- Extract highlights from articles
-- Generate study materials
+- Save code snippets to Apple Notes with language and description
+- Search and organize notes programmatically
+- Watch shared notes for changes in real-time
+
+### System monitoring
+
+- Track CPU, memory, and disk usage over time
+- Generate system reports and save to Notes
+- Get notifications when resources are running low
+
+### Workspace management
+
+- Switch between "work" and "relax" app configurations
+- Adjust volume and open the right set of apps
+- Close unnecessary apps automatically
 
 ## Next steps
 

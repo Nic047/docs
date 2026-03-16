@@ -14,9 +14,9 @@ async function createMeetingNotes() {
   const mac = new Mac();
   const today = new Date().toLocaleDateString();
 
-  await mac.notes.create(
-    `Meeting Notes - ${today}`,
-    `# Team Meeting - ${today}
+  await mac.notes.iCloud.createNote({
+    title: `Meeting Notes - ${today}`,
+    body: `# Team Meeting - ${today}
 
 ## Agenda
 1.
@@ -29,7 +29,7 @@ async function createMeetingNotes() {
 ## Action Items
 - [ ]
 - [ ]`
-  );
+  });
 
   await mac.notification('Notes Created', 'Your meeting notes are ready!');
 }
@@ -39,84 +39,52 @@ createMeetingNotes().catch(console.error);
 
 ## Website screenshot tool
 
-Take screenshots of multiple websites and save them with timestamps:
+Open Safari and take screenshots using the Automation class:
 
 ```javascript
-import { Mac } from '@mac-sdk/automation';
+import { Mac, Automation, Key } from '@mac-sdk/automation';
 
-async function captureWebsites() {
+async function captureScreenshots() {
   const mac = new Mac();
+  const automation = new Automation();
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+
   const websites = [
     'https://github.com',
     'https://www.npmjs.com',
     'https://developer.apple.com'
   ];
 
-  for (const url of websites) {
-    await mac.openApp('Safari');
-    await mac.system.wait(2000);
+  await mac.openApp('Safari');
+  await automation.pause(1000);
 
-    await mac.system.type(`window.location.href = '${url}';`);
-    await mac.system.press('return');
+  for (const url of websites) {
+    // Navigate to URL bar and type address
+    await automation.pressKeyCombo(Key.LeftSuper, Key.L);
+    await automation.pause(200);
+    await automation.type(url);
+    await automation.pressKey(Key.Enter);
 
     // Wait for page to load
-    await mac.system.wait(3000);
+    await automation.pause(3000);
 
     // Take screenshot
     const domain = new URL(url).hostname.replace('www.', '');
     await mac.screenshot(`~/Desktop/${domain}-${timestamp}.png`);
   }
 
-  await mac.notification('Screenshots Complete', 'All website screenshots have been saved to your Desktop');
+  await mac.notification(
+    'Screenshots Complete',
+    'All website screenshots have been saved to your Desktop'
+  );
 }
 
-captureWebsites().catch(console.error);
-```
-
-## Home Assistant integration
-
-Control smart home devices with voice commands:
-
-```javascript
-import { Mac } from '@mac-sdk/automation';
-
-async function homeAutomation() {
-  const mac = new Mac();
-
-  // Listen for voice commands
-  mac.system.on('voiceCommand', async (command) => {
-    command = command.toLowerCase();
-
-    if (command.includes('lights on')) {
-      await mac.ha.callService('light', 'turn_on', {
-        entity_id: 'light.living_room'
-      });
-      await mac.speak('Turning on the living room lights');
-    }
-    else if (command.includes('lights off')) {
-      await mac.ha.callService('light', 'turn_off', {
-        entity_id: 'light.living_room'
-      });
-      await mac.speak('Turning off the living room lights');
-    }
-    else if (command.includes('temperature')) {
-      const temp = await mac.ha.getState('sensor.living_room_temperature');
-      await mac.speak(`The current temperature is ${temp.state} degrees`);
-    }
-  });
-
-  // Start listening for voice commands
-  await mac.system.startVoiceRecognition();
-  console.log('Voice control activated. Try saying "lights on" or "what\'s the temperature"');
-}
-
-homeAutomation().catch(console.error);
+captureScreenshots().catch(console.error);
 ```
 
 ## Code snippet manager
 
-Save and retrieve code snippets from VS Code:
+Save code snippets to Apple Notes for later reference:
 
 ```javascript
 import { Mac } from '@mac-sdk/automation';
@@ -124,37 +92,27 @@ import { Mac } from '@mac-sdk/automation';
 class SnippetManager {
   constructor() {
     this.mac = new Mac();
-    this.snippets = [];
   }
 
-  async saveCurrentSnippet(name, description = '') {
-    const code = await this.mac.vscode.getActiveText();
-    const snippet = {
-      id: Date.now().toString(),
-      name,
-      description,
-      code,
-      language: this.mac.vscode.getActiveLanguage(),
-      createdAt: new Date().toISOString()
-    };
+  async saveSnippet(name, code, language = 'javascript', description = '') {
+    const content = `# ${name}
 
-    this.snippets.push(snippet);
-    await this._saveToNotes(snippet);
-    return snippet;
-  }
+**Language**: ${language}
+**Saved**: ${new Date().toLocaleString()}
 
-  async _saveToNotes(snippet) {
-    const content = `# ${snippet.name}
-
-**Language**: ${snippet.language}
-**Saved**: ${new Date(snippet.createdAt).toLocaleString()}
-
-${snippet.description ? `> ${snippet.description}\n\n` : ''}
-\`\`\`${snippet.language}
-${snippet.code}
+${description ? `> ${description}\n\n` : ''}\`\`\`${language}
+${code}
 \`\`\``;
 
-    await this.mac.notes.create(`Snippet: ${snippet.name}`, content);
+    await this.mac.notes.iCloud.createNote({
+      title: `Snippet: ${name}`,
+      body: content
+    });
+  }
+
+  async listSnippets() {
+    const results = await this.mac.notes.searchNotes('Snippet:');
+    return results;
   }
 }
 
@@ -162,9 +120,17 @@ ${snippet.code}
 async function main() {
   const manager = new SnippetManager();
 
-  await manager.saveCurrentSnippet(
+  await manager.saveSnippet(
     'Array Shuffle',
-    'Efficiently shuffles an array in place using the Fisher-Yates algorithm.'
+    `function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}`,
+    'javascript',
+    'Shuffles an array in place using the Fisher-Yates algorithm.'
   );
 
   console.log('Code snippet saved to Notes!');
@@ -175,26 +141,30 @@ main().catch(console.error);
 
 ## Automated testing workflow
 
-Run tests and report results:
+Open VS Code, run tests, and report results:
 
 ```javascript
-import { Mac } from '@mac-sdk/automation';
+import { Mac, Automation, Key } from '@mac-sdk/automation';
 
 async function runTests() {
   const mac = new Mac();
+  const automation = new Automation();
 
   try {
     // Open VS Code
     await mac.openApp('Visual Studio Code');
+    await automation.pause(2000);
 
-    // Open the terminal and run tests
-    await mac.vscode.runCommand('workbench.action.terminal.toggleTerminal');
-    await mac.system.wait(1000);
-    await mac.system.type('npm test');
-    await mac.system.press('return');
+    // Open the integrated terminal
+    await automation.pressKeyCombo(Key.LeftControl, Key.Grave);
+    await automation.pause(1000);
+
+    // Type the test command
+    await automation.type('npm test');
+    await automation.pressKey(Key.Enter);
 
     // Wait for tests to complete
-    await mac.system.wait(5000);
+    await automation.pause(5000);
 
     // Take a screenshot of the results
     await mac.screenshot('~/Desktop/test-results.png');
@@ -218,9 +188,42 @@ async function runTests() {
 runTests();
 ```
 
+## Desktop automation with mouse and keyboard
+
+Automate UI interactions using the `Automation` class:
+
+```javascript
+import { Mac, Automation, Key } from '@mac-sdk/automation';
+
+async function automateDesktop() {
+  const mac = new Mac();
+  const automation = new Automation(500, 50);
+
+  // Open Spotlight and search
+  await automation.pressKeyCombo(Key.LeftSuper, Key.Space);
+  await automation.pause(500);
+  await automation.type('Calculator');
+  await automation.pressKey(Key.Enter);
+  await automation.pause(1000);
+
+  // Click at specific coordinates
+  await automation.click(300, 400);
+  await automation.pause(200);
+
+  // Scroll down
+  await automation.scrollDown(500);
+
+  // Take a screenshot of the result
+  await mac.screenshot('~/Desktop/automation-demo.png');
+  await mac.notification('Automation Complete', 'Desktop automation demo finished!');
+}
+
+automateDesktop().catch(console.error);
+```
+
 ## System monitoring dashboard
 
-Create a simple system monitoring tool:
+Create a simple system monitoring tool using Mac SDK system controls:
 
 ```javascript
 import { Mac } from '@mac-sdk/automation';
@@ -228,11 +231,6 @@ import { Mac } from '@mac-sdk/automation';
 class SystemMonitor {
   constructor() {
     this.mac = new Mac();
-    this.metrics = {
-      cpu: [],
-      memory: [],
-      timestamp: []
-    };
     this.isMonitoring = false;
   }
 
@@ -241,9 +239,16 @@ class SystemMonitor {
     console.log('Starting system monitoring...');
 
     while (this.isMonitoring) {
-      const stats = await this._getSystemStats();
-      this._updateMetrics(stats);
-      this._displayDashboard();
+      const disk = await this.mac.system.getDiskSpace();
+      const cpu = await this.mac.system.getCPUUsage();
+      const memory = await this.mac.system.getMemoryUsage();
+
+      console.clear();
+      console.log('=== System Monitoring ===\n');
+      console.log(`Disk: ${disk.used} used of ${disk.total} (${disk.percentage})`);
+      console.log(`\nCPU:\n${cpu}`);
+      console.log(`\nMemory:\n${memory}`);
+      console.log('\nPress Ctrl+C to stop monitoring...');
 
       await new Promise(resolve => setTimeout(resolve, interval));
     }
@@ -252,42 +257,6 @@ class SystemMonitor {
   stopMonitoring() {
     this.isMonitoring = false;
     console.log('\nMonitoring stopped');
-  }
-
-  async _getSystemStats() {
-    return {
-      cpu: Math.random() * 100,
-      memory: process.memoryUsage().heapUsed / 1024 / 1024,
-      timestamp: new Date().toLocaleTimeString()
-    };
-  }
-
-  _updateMetrics(stats) {
-    this.metrics.cpu.push(stats.cpu);
-    this.metrics.memory.push(stats.memory);
-    this.metrics.timestamp.push(stats.timestamp);
-
-    // Keep only the last 10 readings
-    if (this.metrics.cpu.length > 10) {
-      this.metrics.cpu.shift();
-      this.metrics.memory.shift();
-      this.metrics.timestamp.shift();
-    }
-  }
-
-  _displayDashboard() {
-    console.clear();
-    console.log('=== System Monitoring ===\n');
-    console.log(`CPU Usage:    ${this.metrics.cpu[this.metrics.cpu.length - 1].toFixed(1)}%`);
-    console.log(`Memory Usage: ${this.metrics.memory[this.metrics.memory.length - 1].toFixed(2)} MB\n`);
-
-    console.log('CPU Usage History:');
-    this.metrics.cpu.forEach((value, i) => {
-      const bar = '#'.repeat(Math.ceil(value / 10));
-      console.log(`${this.metrics.timestamp[i]} | ${bar} ${value.toFixed(1)}%`);
-    });
-
-    console.log('\nPress Ctrl+C to stop monitoring...');
   }
 }
 
@@ -304,4 +273,51 @@ async function main() {
 }
 
 main().catch(console.error);
+```
+
+## Note change watcher
+
+Watch a note for changes and react in real-time:
+
+```javascript
+import { Mac } from '@mac-sdk/automation';
+
+async function watchNote() {
+  const mac = new Mac();
+
+  // First, create a note to watch
+  await mac.notes.iCloud.createNote({
+    title: 'Shared TODO',
+    body: '# Shared TODO List\n\n- [ ] First task'
+  });
+
+  // Watch for changes
+  const cleanup = await mac.notes.iCloud.listenForChange(
+    'Shared TODO',
+    async (event) => {
+      console.log(`Note "${event.title}" was modified`);
+
+      if (event.changes.added) {
+        console.log('Added:', event.changes.added);
+        await mac.notification('Note Updated', `New content added to ${event.title}`);
+      }
+
+      if (event.changes.removed) {
+        console.log('Removed:', event.changes.removed);
+      }
+    },
+    3000,  // debounce: 3 seconds
+    2000   // poll: every 2 seconds
+  );
+
+  console.log('Watching for changes... Edit the "Shared TODO" note in Apple Notes.');
+  console.log('Press Ctrl+C to stop.');
+
+  process.on('SIGINT', () => {
+    cleanup();
+    process.exit();
+  });
+}
+
+watchNote().catch(console.error);
 ```
