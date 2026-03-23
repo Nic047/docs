@@ -3,7 +3,7 @@ title: Mac class
 description: The main entry point for Mac SDK
 ---
 
-The `Mac` class is the primary interface for interacting with Mac SDK. It provides access to system controls, built-in apps, and convenience shortcuts.
+The `Mac` class is the primary interface for interacting with Mac SDK. It provides access to system controls, built-in apps, and convenience shortcuts for common operations.
 
 ## Import
 
@@ -17,7 +17,7 @@ import { Mac } from '@mac-sdk/automation';
 const mac = new Mac();
 ```
 
-The `Mac` constructor takes no arguments. It initializes the system controls, app manager, and built-in app integrations automatically.
+The `Mac` constructor takes no arguments. It initializes the system controls, app manager, and built-in app integrations (Notes and VS Code) automatically.
 
 ## Properties
 
@@ -30,18 +30,20 @@ The `Mac` constructor takes no arguments. It initializes the system controls, ap
 
 ## Methods
 
+All methods below are convenience shortcuts that delegate to `mac.system`.
+
 ### `app(name: string): BaseApp`
 
-Get an application instance by name. Returns a `GenericApp` (extends `BaseApp`) for any application. Instances are lazily created and cached.
+Get an application instance by name. Returns a `GenericApp` (extends `BaseApp`) for any application. Instances are lazily created and cached by the `AppManager`.
 
 ```typescript
 const safari = mac.app('Safari');
 await safari.activate();
 ```
 
-### `copyToClipboard(text: string): Promise<void>`
+### `copyToClipboard(text: string): Promise<string>`
 
-Copy text to the system clipboard. Shortcut for `mac.system.copyToClipboard()`.
+Copy text to the system clipboard.
 
 ```typescript
 await mac.copyToClipboard('Hello, world!');
@@ -49,7 +51,7 @@ await mac.copyToClipboard('Hello, world!');
 
 ### `getClipboard(): Promise<string>`
 
-Get the current content of the system clipboard. Shortcut for `mac.system.getClipboard()`.
+Get the current content of the system clipboard.
 
 ```typescript
 const content = await mac.getClipboard();
@@ -74,7 +76,7 @@ const screenshotPath = await mac.screenshot();
 const customPath = await mac.screenshot('~/Desktop/screenshot.png');
 ```
 
-### `notification(title: string, message: string, sound?: string): Promise<void>`
+### `notification(title: string, message: string, sound?: string): Promise<string>`
 
 Display a macOS system notification.
 
@@ -92,7 +94,7 @@ await mac.notification(
 );
 ```
 
-### `speak(text: string, voice?: string): Promise<void>`
+### `speak(text: string, voice?: string): Promise<string>`
 
 Convert text to speech using the macOS `say` command.
 
@@ -105,7 +107,7 @@ Convert text to speech using the macOS `say` command.
 await mac.speak('Hello, I am your Mac assistant', 'Samantha');
 ```
 
-### `openApp(name: string): Promise<void>`
+### `openApp(name: string): Promise<string>`
 
 Open an application by name using the macOS `open -a` command.
 
@@ -156,6 +158,6 @@ main().catch(console.error);
 
 ## See also
 
-- [API reference](/api-reference/overview) - Complete method documentation
+- [API reference](/api-reference/overview) - Complete method documentation for all classes
 - [Explorer guide](/guides/explorer) - File system operations and system controls
 - [Advanced automation](/guides/advanced-automation) - Automation patterns and best practices

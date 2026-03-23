@@ -291,14 +291,17 @@ async function watchNote() {
     body: '# Shared TODO List\n\n- [ ] First task'
   });
 
-  // Watch for changes
+  // Watch for changes (debounce: 3s, poll: every 2s)
   const cleanup = await mac.notes.iCloud.listenForChange(
     'Shared TODO',
     async (event) => {
       console.log(`Note "${event.title}" was modified`);
+      console.log('Previous content:', event.previousContent);
+      console.log('New content:', event.newContent);
 
       if (event.changes.added) {
         console.log('Added:', event.changes.added);
+        console.log('At position:', event.changes.position);
         await mac.notification('Note Updated', `New content added to ${event.title}`);
       }
 
