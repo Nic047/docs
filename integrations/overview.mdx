@@ -5,6 +5,10 @@ description: Extend Mac SDK with custom app integrations
 
 Mac SDK is designed to be extensible. You can add support for any macOS application by extending the `BaseApp` class and registering it with the `AppManager`.
 
+```typescript
+import { BaseApp, Mac, AppManager } from '@mac-sdk/automation';
+```
+
 ## Built-in integrations
 
 Mac SDK ships with built-in support for:
@@ -31,9 +35,9 @@ console.log('Is running:', safari.isRunning());
 Extend Mac SDK with your own application integrations by subclassing `BaseApp`:
 
 ```typescript
-import { BaseApp } from '@mac-sdk/automation';
+import { BaseApp, Mac } from '@mac-sdk/automation';
 
-export class SlackApp extends BaseApp {
+class SlackApp extends BaseApp {
   constructor() {
     super('Slack');
   }
@@ -72,14 +76,14 @@ When you extend `BaseApp`, your custom app inherits these methods:
 
 ### Internal helpers
 
-Inside your custom app class, you can use these protected methods:
+Inside your custom app class, you can use these methods to interact with the system:
 
-| Method | Description |
-| --- | --- |
-| `_executeAppleScript(script)` | Execute an AppleScript string (15s timeout) |
-| `_shellCommand(cmd)` | Execute a shell command (10s timeout) |
-| `_escapeAppleScript(script)` | Escape single quotes for AppleScript |
-| `_escapeString(str)` | Escape quotes and newlines for embedding in scripts |
+| Method | Returns | Description |
+| --- | --- | --- |
+| `_executeAppleScript(script)` | `string` | Execute an AppleScript string (15s timeout) |
+| `_shellCommand(cmd)` | `string` | Execute a shell command (10s timeout) |
+| `_escapeAppleScript(script)` | `string` | Escape single quotes for AppleScript |
+| `_escapeString(str)` | `string` | Escape quotes and newlines for embedding in scripts |
 
 ```typescript
 export class SpotifyApp extends BaseApp {

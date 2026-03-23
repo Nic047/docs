@@ -204,7 +204,7 @@ class OptimizedAutomation {
 
 ## Monitoring note changes
 
-Use the `listenForChange` method to react to changes in Apple Notes:
+Use the `listenForChange` method to react to changes in Apple Notes. It polls the note at a set interval, debounces rapid edits, and calls your callback with a diff of what changed.
 
 ```typescript
 import { Mac } from '@mac-sdk/automation';
@@ -215,10 +215,17 @@ const mac = new Mac();
 const cleanup = await mac.notes.iCloud.listenForChange(
   'My Note',
   (event) => {
-    console.log('Note changed!');
-    console.log('Added:', event.changes.added);
-    console.log('Removed:', event.changes.removed);
+    console.log(`Note "${event.title}" was modified`);
+    console.log('New content:', event.newContent);
+    console.log('Previous content:', event.previousContent);
     console.log('Note ID:', event.noteId);
+
+    // Diff details
+    console.log('Added text:', event.changes.added);
+    console.log('Removed text:', event.changes.removed);
+    console.log('Change position:', event.changes.position);
+    console.log('Context before:', event.changes.contextBefore);
+    console.log('Context after:', event.changes.contextAfter);
   },
   5000,  // debounce time (ms)
   2000   // poll interval (ms)
@@ -228,4 +235,21 @@ const cleanup = await mac.notes.iCloud.listenForChange(
 // cleanup();
 ```
 
-These patterns help you build robust, maintainable, and efficient automations with Mac SDK.
+The callback receives an event object with the following properties:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `newContent` | `string` | Current note content |
+| `previousContent` | `string` | Content before the change |
+| `noteId` | `string` | Apple Notes ID |
+| `title` | `string` | Note title |
+| `changes.added` | `string \| null` | Text that was added |
+| `changes.removed` | `string \| null` | Text that was removed |
+| `changes.hasChanges` | `boolean` | Whether actual changes exist |
+| `changes.position` | `number` | Character position of the change |
+| `changes.contextBefore` | `string \| null` | Up to 20 characters before the change |
+| `changes.contextAfter` | `string \| null` | Up to 20 characters after the change |
+
+<Note>
+  The `listenForChange` method prevents overlapping checks — if a poll is still running when the next interval fires, it skips that cycle. The cleanup function returned stops polling and clears any pending debounce timers.
+</Note>
