@@ -107,13 +107,13 @@ Convert text to speech using the macOS `say` command.
 await mac.speak('Hello, I am your Mac assistant', 'Samantha');
 ```
 
-### `openApp(name: string): Promise<string>`
+### `openApp(appName: string): Promise<string>`
 
 Open an application by name using the macOS `open -a` command.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `name` | `string` | Yes | Application name |
+| `appName` | `string` | Yes | Application name |
 
 ```typescript
 await mac.openApp('Safari');
