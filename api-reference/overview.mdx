@@ -542,7 +542,7 @@ Access through `mac.notes`. The Notes app uses a folder-based API with iCloud as
 | --- | --- |
 | `open()` | Activate the Notes app. Returns `this` for chaining |
 | `createNote({title, body})` | Create a new note. Body is Markdown, automatically converted to HTML |
-| `createRichNote({title, body})` | Create a note. When body is provided, creates the note with that content |
+| `createRichNote({title, body})` | Create a note with rich content. If `body` is omitted, generates a template with headings, lists, and checkboxes |
 | `appendToNote(title, content)` | Append HTML content to an existing note by title. Returns `true` if found |
 | `deleteNote(title)` | Delete a note by title. Returns `true` if found and deleted |
 | `listNotes()` | List all notes. Returns array of `{title, modified, preview}` |
@@ -657,7 +657,7 @@ const projectPath = await mac.vscode.createProject('my-app', 'node');
 
 ## BaseApp
 
-All app instances (including those from `mac.app()`) inherit from `BaseApp`, which provides common application lifecycle methods. All methods that interact with apps use AppleScript via `osascript`.
+All app instances (including those from `mac.app()`) inherit from `BaseApp`, which provides common application lifecycle methods. All methods that interact with apps use AppleScript via `osascript`. The `BaseApp` constructor takes a single `name` parameter — the exact application name as it appears in macOS.
 
 | Method | Returns | Description |
 | --- | --- | --- |

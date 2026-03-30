@@ -11,6 +11,10 @@ This guide walks you through creating a simple automation script with Mac SDK.
 - macOS 10.15 (Catalina) or later
 - Xcode Command Line Tools (install with `xcode-select --install`)
 
+<Note>
+  Mac SDK is an ES module package. Your project must use `"type": "module"` in `package.json` or use the `.mjs` file extension.
+</Note>
+
 ## Installation
 
 Install the Mac SDK package using npm:
@@ -29,6 +33,11 @@ Install the Mac SDK package using npm:
   <Tab title="pnpm">
     ```bash
     pnpm add @mac-sdk/automation
+    ```
+  </Tab>
+  <Tab title="bun">
+    ```bash
+    bun add @mac-sdk/automation
     ```
   </Tab>
 </Tabs>
@@ -142,3 +151,10 @@ If you see `Cannot find module '@mac-sdk/automation'`:
 1. Run `npm install` in your project directory.
 2. Verify the package name in your `package.json`.
 3. Check your Node.js version with `node -v` (should be 14.0.0 or higher).
+
+### ERR_REQUIRE_ESM
+
+If you see `ERR_REQUIRE_ESM`, Mac SDK is an ES module and cannot be loaded with `require()`. Either:
+
+1. Add `"type": "module"` to your `package.json`.
+2. Rename your script file to use the `.mjs` extension.

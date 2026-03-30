@@ -11,6 +11,10 @@ Before installing Mac SDK, ensure you have the following:
 - Node.js 14.0.0 or later
 - Xcode Command Line Tools (install with `xcode-select --install`)
 
+<Note>
+  Mac SDK is an ES module package (`"type": "module"`). Your project must use ES module syntax (`import`/`export`). Add `"type": "module"` to your `package.json` or use the `.mjs` file extension.
+</Note>
+
 ## Installation methods
 
 <Tabs>
@@ -27,6 +31,11 @@ Before installing Mac SDK, ensure you have the following:
   <Tab title="pnpm">
     ```bash
     pnpm add @mac-sdk/automation
+    ```
+  </Tab>
+  <Tab title="bun">
+    ```bash
+    bun add @mac-sdk/automation
     ```
   </Tab>
 </Tabs>
@@ -87,6 +96,11 @@ To update to the latest version:
     pnpm update @mac-sdk/automation
     ```
   </Tab>
+  <Tab title="bun">
+    ```bash
+    bun update @mac-sdk/automation
+    ```
+  </Tab>
 </Tabs>
 
 ## Troubleshooting
@@ -118,6 +132,13 @@ If you see `Cannot find module '@mac-sdk/automation'`:
      "@mac-sdk/automation": "^0.1.0"
    }
    ```
+
+### ERR_REQUIRE_ESM
+
+If you see `ERR_REQUIRE_ESM`, Mac SDK uses ES modules and cannot be loaded with `require()`. Either:
+
+1. Add `"type": "module"` to your `package.json`.
+2. Rename your script file to use the `.mjs` extension.
 
 ### TypeScript errors
 
