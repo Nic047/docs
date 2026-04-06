@@ -6,8 +6,13 @@ description: Extend Mac SDK with custom app integrations
 Mac SDK is designed to be extensible. You can add support for any macOS application by extending the `BaseApp` class and registering it with the `AppManager`.
 
 ```typescript
-import { BaseApp, Mac, AppManager } from '@mac-sdk/automation';
+import { Mac, AppManager } from '@mac-sdk/automation';
+import { BaseApp } from '@mac-sdk/automation/core/base-app.js';
 ```
+
+<Note>
+  `BaseApp` is not exported from the main `@mac-sdk/automation` entry point. Import it directly from the subpath as shown above.
+</Note>
 
 ## Built-in integrations
 
@@ -35,7 +40,8 @@ console.log('Is running:', safari.isRunning());
 Extend Mac SDK with your own application integrations by subclassing `BaseApp`:
 
 ```typescript
-import { BaseApp, Mac } from '@mac-sdk/automation';
+import { Mac } from '@mac-sdk/automation';
+import { BaseApp } from '@mac-sdk/automation/core/base-app.js';
 
 class SlackApp extends BaseApp {
   constructor() {
@@ -86,6 +92,8 @@ Inside your custom app class, you can use these methods to interact with the sys
 | `_escapeString(str)` | `string` | Escape quotes and newlines for embedding in scripts |
 
 ```typescript
+import { BaseApp } from '@mac-sdk/automation/core/base-app.js';
+
 export class SpotifyApp extends BaseApp {
   constructor() {
     super('Spotify');
