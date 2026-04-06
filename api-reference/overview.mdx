@@ -11,7 +11,7 @@ Mac SDK exports the following from `@mac-sdk/automation`:
 import {
   Mac,            // Main entry point
   Automation,     // Desktop mouse/keyboard control
-  Key,            // Key constants (from nut.js)
+  Key,            // Key constants (from @nut-tree-fork/nut-js)
   Notes,          // NotesApp class (alias)
   VSCodeApp,      // VS Code app class
   SystemControls, // System controls and file operations
@@ -542,8 +542,7 @@ Access through `mac.notes`. The Notes app uses a folder-based API with iCloud as
 | --- | --- |
 | `open()` | Activate the Notes app. Returns `this` for chaining |
 | `createNote({title, body})` | Create a new note. Body is Markdown, automatically converted to HTML |
-| `createRichNote({title, body})` | Create a note with rich content. If `body` is omitted, generates a template with headings, lists, and checkboxes |
-| `appendToNote(title, content)` | Append HTML content to an existing note by title. Returns `true` if found |
+| `appendToNote(title, content)` | Append Markdown content to an existing note by title. Returns `true` if found |
 | `deleteNote(title)` | Delete a note by title. Returns `true` if found and deleted |
 | `listNotes()` | List all notes. Returns array of `{title, modified, preview}` |
 | `find(title)` | Search for a note by title (delegates to `NotesApp.find()`) |
@@ -719,7 +718,7 @@ mac.apps.register('myapp', new MyApp());
 
 ## Automation
 
-The `Automation` class provides low-level mouse and keyboard control via [nut.js](https://github.com/nut-tree/nut.js). This is a separate class from `Mac` — use it for pixel-based desktop UI automation.
+The `Automation` class provides low-level mouse and keyboard control via [`@nut-tree-fork/nut-js`](https://www.npmjs.com/package/@nut-tree-fork/nut-js). This is a separate class from `Mac` — use it for pixel-based desktop UI automation.
 
 ```javascript
 import { Automation, Key } from '@mac-sdk/automation';
@@ -783,8 +782,13 @@ See the [nut.js Key documentation](https://nut-tree.github.io/apidoc/enums/key_e
 
 To add support for a new application, extend the `BaseApp` class and register it with the `AppManager`:
 
+<Note>
+  `BaseApp` is not currently exported from the main `@mac-sdk/automation` entry point. Import it directly from the subpath.
+</Note>
+
 ```javascript
-import { BaseApp, Mac } from '@mac-sdk/automation';
+import { Mac } from '@mac-sdk/automation';
+import { BaseApp } from '@mac-sdk/automation/core/base-app.js';
 
 class SpotifyApp extends BaseApp {
   constructor() {
