@@ -542,6 +542,7 @@ Access through `mac.notes`. The Notes app uses a folder-based API with iCloud as
 | --- | --- |
 | `open()` | Activate the Notes app. Returns `this` for chaining |
 | `createNote({title, body})` | Create a new note. Body is Markdown, automatically converted to HTML |
+| `createRichNote({title, body?})` | Create a note with a rich template. If no body is provided, generates a default template with headings, todos, blockquotes, code blocks, links, and a table |
 | `appendToNote(title, content)` | Append Markdown content to an existing note by title. Returns `true` if found |
 | `deleteNote(title)` | Delete a note by title. Returns `true` if found and deleted |
 | `listNotes()` | List all notes. Returns array of `{title, modified, preview}` |
@@ -553,6 +554,15 @@ Access through `mac.notes`. The Notes app uses a folder-based API with iCloud as
 await mac.notes.iCloud.createNote({
   title: 'Meeting Notes',
   body: '# Agenda\n- Item 1\n- [ ] Task to do'
+});
+
+// Create a note with a rich template (headings, todos, code blocks, tables)
+await mac.notes.iCloud.createRichNote({ title: 'Project Plan' });
+
+// Or provide your own body (still processed through Markdown conversion)
+await mac.notes.iCloud.createRichNote({
+  title: 'Custom Rich Note',
+  body: '# Custom content\n- [ ] Task 1\n- [x] Task 2'
 });
 
 // List all notes
