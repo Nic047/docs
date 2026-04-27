@@ -20,14 +20,14 @@ Mac SDK ships with built-in support for:
 
 <Columns cols={2}>
   <Card title="Apple Notes" icon="note-sticky" href="/api-reference/overview#notes-app">
-    Create, search, and manage notes with Markdown support.
+    Create, search, list, append to, and watch notes. Markdown bodies are auto-converted to HTML.
   </Card>
   <Card title="VS Code" icon="code" href="/api-reference/overview#vs-code-app">
-    Open files, folders, workspaces, and scaffold projects.
+    Open files, folders, workspaces, and scaffold projects from templates.
   </Card>
 </Columns>
 
-Any other application can be controlled through the generic `mac.app()` interface, which provides lifecycle methods like `activate()`, `quit()`, `isRunning()`, and more.
+Any other application can be controlled through the generic `mac.app()` interface, which returns a `GenericApp` (a subclass of `BaseApp`) with lifecycle methods like `activate()`, `quit()`, and `isRunning()`.
 
 ```javascript
 const safari = mac.app('Safari');
