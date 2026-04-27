@@ -9,15 +9,19 @@ Mac SDK exports the following from `@mac-sdk/automation`:
 
 ```typescript
 import {
-  Mac,            // Main entry point
+  Mac,            // Main entry point class
   Automation,     // Desktop mouse/keyboard control
-  Key,            // Key constants (from @nut-tree-fork/nut-js)
-  Notes,          // NotesApp class (alias)
+  Key,            // Key constants (re-exported from @nut-tree-fork/nut-js)
+  Notes,          // Alias for NotesApp
   VSCodeApp,      // VS Code app class
-  SystemControls, // System controls and file operations
+  SystemControls, // System controls and file operations (Explorer)
   AppManager,     // Application manager
 } from '@mac-sdk/automation';
 ```
+
+<Note>
+  `BaseApp` is not exported from the package entry point. To extend it for custom integrations, import it directly from the subpath: `@mac-sdk/automation/core/base-app.js`.
+</Note>
 
 ## Mac class
 
@@ -525,29 +529,37 @@ console.log('Clipboard contains:', clipboardContent);
 
 ### Notes app
 
-Access through `mac.notes`. The Notes app uses a folder-based API with iCloud as the default account. Note bodies are written in Markdown and automatically converted to HTML before being sent to Apple Notes.
+Access through `mac.notes`. The Notes app provides a `NotesFolder` API scoped to a specific Apple Notes **account**. Notes are looked up across all folders within that account. Note bodies are written in Markdown and automatically converted to HTML before being sent to Apple Notes.
+
+<Note>
+  Despite its name, `NotesFolder` represents a Notes **account** (such as `iCloud` or a local account), not an individual folder within that account. The `name` constructor argument is the account name passed to AppleScript as `account "<name>"`.
+</Note>
 
 #### `NotesApp` methods
 
 | Method | Description |
 | --- | --- |
-| `iCloud` | Default `NotesFolder` instance for the iCloud account |
-| `folder(name)` | Get a `NotesFolder` for a specific account name |
-| `find(title)` | Search all iCloud notes for a note by exact title. Returns `{title, content}` or `null` |
-| `searchNotes(query)` | Search note titles and bodies. Returns array of `{title, preview}` |
+| `iCloud` | Default `NotesFolder` instance bound to the `iCloud` account |
+| `folder(name)` | Get a `NotesFolder` bound to a specific Notes account |
+| `find(title)` | Search all notes in the `iCloud` account for a note by exact title. Returns `{title, content}` or `null` |
+| `searchNotes(query)` | Substring search across `iCloud` note titles and bodies. Returns an array of `{title, preview}` |
 
 #### `NotesFolder` methods
 
 | Method | Description |
 | --- | --- |
 | `open()` | Activate the Notes app. Returns `this` for chaining |
-| `createNote({title, body})` | Create a new note. Body is Markdown, automatically converted to HTML |
-| `createRichNote({title, body})` | Create a note with rich formatting. Body is Markdown, automatically converted to HTML |
-| `appendToNote(title, content)` | Append Markdown content to an existing note by title. Returns `true` if found |
-| `deleteNote(title)` | Delete a note by title. Returns `true` if found and deleted |
-| `listNotes()` | List all notes. Returns array of `{title, modified, preview}` |
+| `createNote({title, body})` | Create a new note. `body` is Markdown and is automatically converted to HTML |
+| `createRichNote({title, body})` | Create a note. Currently equivalent to `createNote` — `body` is required |
+| `appendToNote(title, content)` | Append Markdown content to an existing note. Returns `true` if found |
+| `deleteNote(title)` | Delete a note by exact title. Returns `true` if deleted |
+| `listNotes()` | List all notes in the account. Returns an array of `{title, modified, preview}` |
 | `find(title)` | Search for a note by title (delegates to `NotesApp.find()`) |
 | `listenForChange(title, callback, debounceTime?, pollInterval?)` | Poll a note for changes with debouncing. Returns a cleanup function |
+
+<Note>
+  All `NotesFolder` lookups iterate every folder of the bound account. Notes are matched by exact title.
+</Note>
 
 ```javascript
 // Create a note with Markdown content
@@ -556,10 +568,11 @@ await mac.notes.iCloud.createNote({
   body: '# Agenda\n- Item 1\n- [ ] Task to do'
 });
 
-// Create a rich note (body is processed through Markdown conversion)
-await mac.notes.iCloud.createRichNote({
-  title: 'Custom Rich Note',
-  body: '# Custom content\n- [ ] Task 1\n- [x] Task 2'
+// Use a non-iCloud account by name
+const work = mac.notes.folder('Work');
+await work.createNote({
+  title: 'Work note',
+  body: '# Tasks\n- [ ] Standup at 10am'
 });
 
 // List all notes
@@ -613,24 +626,28 @@ Note bodies are passed through a built-in `MarkdownProcessor` that converts Mark
 - Bold (`**text**`) and italic (`*text*`)
 - Unordered lists (`- item`)
 - Ordered lists (`1. item`)
-- Todo checkboxes (`- [ ] task` and `- [x] done`)
+- Todo checkboxes (`- [ ] task` renders as ☐ and `- [x] done` renders as ☑)
 - Blockquotes (`> quote`)
 - Fenced code blocks (`` ```code``` ``)
 - Inline code (`` `code` ``)
 - Links (`[text](url)`)
-- Pipe-delimited tables
+- Pipe-delimited tables (`| col | col |`)
+
+<Note>
+  Markdown is converted to HTML on the JavaScript side using a lightweight regex-based processor. Apple Notes then renders the HTML. Some advanced Markdown features (nested lists, footnotes, HTML embeds) are not supported.
+</Note>
 
 ### VS Code app
 
-Access through `mac.vscode`. The VS Code app uses `open -a "Visual Studio Code"` to launch and interact with VS Code.
+Access through `mac.vscode`. The VS Code app shells out to `open -a "Visual Studio Code"` to launch and interact with VS Code.
 
 | Method | Description |
 | --- | --- |
-| `open(content?, filename?)` | Open VS Code. If content is provided, writes to a temp file and opens it. Returns the temp file path or `null` |
+| `open(content?, filename?)` | Open VS Code. If `content` is provided, writes it to a temp file (named `mac_sdk_<timestamp>_<filename>`) and opens that file. Returns the temp file path, or `null` if no content was provided |
 | `openFolder(folderPath)` | Open a folder in VS Code. Returns the folder path |
-| `newFile(content, filename?)` | Create and open a new file (alias for `open()`) |
+| `newFile(content, filename?)` | Alias for `open(content, filename)` |
 | `openWorkspace(workspacePath)` | Open a `.code-workspace` file in VS Code. Returns the workspace path |
-| `createProject(name, template?)` | Create a project from a template in a temp directory and open it in VS Code. Returns the project path |
+| `createProject(name, template?)` | Create a project from a built-in template inside `os.tmpdir()` and open it in VS Code. Returns the project path |
 
 Available project templates for `createProject`:
 

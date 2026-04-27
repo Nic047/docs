@@ -58,11 +58,11 @@ async function main() {
     console.log('Opening Safari...');
     await mac.openApp('Safari');
 
-    // Create a new note
+    // Create a new note in the iCloud Notes account
     console.log('Creating a note...');
     await mac.notes.iCloud.createNote({
       title: 'My First Note',
-      body: 'Hello from Mac SDK!'
+      body: '# Hello from Mac SDK!\n\nThis note was created automatically.'
     });
 
     // Take a screenshot
